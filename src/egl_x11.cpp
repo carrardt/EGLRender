@@ -19,7 +19,7 @@ under the License.
 
 #include <EGLRender/egl_platform.h>
 
-#ifdef ONIKA_EGL_USE_X11
+#ifdef EGLRENDER_USE_X11
 
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
