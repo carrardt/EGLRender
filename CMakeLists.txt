@@ -58,6 +58,23 @@ if(EGL_CHECK_ERROR_ABORT_ON_FAILURE)
   list(APPEND EGLRENDER_DEFINITIONS EGL_CHECK_ERROR_ABORT_ON_FAILURE=1)
 endif()
 
+set(EGLRENDER_GPU_COMPUTE_API "NONE" CACHE STRING "Interoperability with GPU compute api")
+set_property(CACHE EGLRENDER_GPU_COMPUTE_API PROPERTY STRINGS NONE CUDA HIP)
+option(EGL_ENABLE_ "Enable " OFF)
+if(NOT EGLRENDER_GPU_COMPUTE_API STREQUAL "NONE")
+  if(EGLRENDER_GPU_COMPUTE_API STREQUAL "CUDA")
+    find_package(CUDAToolkit REQUIRED)
+    list(APPEND EGLRENDER_LIBS CUDA::cudart)
+    list(APPEND EGLRENDER_DEFINITIONS EGLRENDER_GPU_COMPUTE_API=1 EGLRENDER_USE_CUDA=1)
+  elseif(EGLRENDER_GPU_COMPUTE_API STREQUAL "HIP")
+    find_package(ROCmCMakeBuildTools REQUIRED)
+    list(APPEND EGLRENDER_LIBS REQUIRED hip::hiprt)
+    list(APPEND EGLRENDER_DEFINITIONS EGLRENDER_GPU_COMPUTE_API=1 EGLRENDER_USE_HIP=1)
+  else()
+    message(FATAL_ERROR "Unsupported GPU compute API ${EGLRENDER_GPU_COMPUTE_API}")
+  endif()
+endif()
+
 add_library(EGLRender SHARED
 	src/egl_render_manager.cpp
 	src/egl_error.cpp
@@ -80,6 +97,7 @@ set_property(TARGET EGLRender PROPERTY SOVERSION ${PROJECT_VERSION_MAJOR})
 set_property(TARGET EGLRender PROPERTY INTERFACE_EGLRender_MAJOR_VERSION ${PROJECT_VERSION_MAJOR})
 set_property(TARGET EGLRender APPEND PROPERTY COMPATIBLE_INTERFACE_STRING EGLRender_MAJOR_VERSION)
 
+# install targets that are exportable with a package file
 install(TARGETS EGLRender
         EXPORT EGLRenderTargets
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
@@ -90,10 +108,12 @@ install(TARGETS EGLRender
 install(DIRECTORY include/EGLRender TYPE INCLUDE)
 install(EXPORT EGLRenderTargets NAMESPACE EGLRender:: DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake)
 
+# sample test with vertex, geometry and fragment shader
+add_executable(egl_test tests/egl_test.cpp)
+target_link_libraries(egl_test EGLRender)
+install(TARGETS egl_test DESTINATION ${CMAKE_INSTALL_BINDIR})
+
+# Generates and exports cmake package files for import into another project
 configure_package_config_file(${CMAKE_CURRENT_SOURCE_DIR}/Config.cmake.in "${CMAKE_CURRENT_BINARY_DIR}/EGLRenderConfig.cmake" INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake)
 write_basic_package_version_file("${CMAKE_CURRENT_BINARY_DIR}/EGLRenderConfigVersion.cmake" VERSION "${PROJECT_VERSION}" COMPATIBILITY AnyNewerVersion)
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/EGLRenderConfig.cmake" "${CMAKE_CURRENT_BINARY_DIR}/EGLRenderConfigVersion.cmake" DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake)
-
-add_executable(egl_test tests/egl_test.cpp)
-target_link_libraries(egl_test EGLRender)
-#install(TARGETS egl_test DESTINATION ${CMAKE_INSTALL_BINDIR})

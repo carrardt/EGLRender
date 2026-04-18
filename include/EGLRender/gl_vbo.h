@@ -23,8 +23,6 @@ under the License.
 #include <vector>
 #include <span>
 
-//#include <onika/cuda/cuda_context.h>
-
 namespace EGLRender
 {
 
@@ -39,10 +37,12 @@ namespace EGLRender
     GLuint m_vertices = 0;
     std::vector<GLint> m_attrib_formats = {};
     std::vector<GLuint> m_vbo = gen_buffer_ids( m_vertices, m_attrib_formats );
-    std::vector<void*> m_buffer_resource = { m_vbo.size() , nullptr };
+    std::vector<void*> m_buffer_resource; // for GPU compute API interoperability
 
+    // initialization functions
     static std::vector<GLuint> gen_buffer_ids( GLuint nv, std::span<GLint> attrib_formats );
 
+    // member methods
     void set_attrib_formats(std::span<const GLint> attribs);
     inline size_t number_of_attribs() const { return m_attrib_formats.size()/2; }
     inline GLint attrib_type(GLuint i) const { return m_attrib_formats[i*2]; }
@@ -54,8 +54,8 @@ namespace EGLRender
     void* host_map_write_only(GLuint index);
     void host_unmap(GLuint index);
 
-    void* cu_map_write_only(GLuint index);
-    void cu_unmap_buffer(GLuint index);
+    void* gpu_map_write_only(GLuint index, void* gpu_stream=nullptr);
+    void gpu_unmap_buffer(GLuint index);
 
     void use();
 

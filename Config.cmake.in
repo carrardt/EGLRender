@@ -10,7 +10,15 @@ if(EGLRENDER_NATIVE_DISPLAY STREQUAL "X11")
   find_dependency(X11)
 endif()
 
+set(EGLRENDER_GPU_COMPUTE_API "@EGLRENDER_GPU_COMPUTE_API@")
+if(EGLRENDER_GPU_COMPUTE_API STREQUAL "CUDA")
+  find_dependency(CUDAToolkit REQUIRED)
+elseif(EGLRENDER_GPU_COMPUTE_API STREQUAL "HIP")
+  find_dependency(ROCmCMakeBuildTools REQUIRED)
+else()
+  message(FATAL_ERROR "Unsupported GPU compute API ${EGLRENDER_GPU_COMPUTE_API}")
+endif()
+
 include("${CMAKE_CURRENT_LIST_DIR}/EGLRenderTargets.cmake")
 check_required_components(EGLRender)
 
-#target_link_libraries(EGLRender PUBLIC ${EGLRENDER_LIBS})
