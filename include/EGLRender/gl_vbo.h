@@ -55,7 +55,7 @@ namespace EGLRender
     void host_unmap(GLuint index);
 
     void* gpu_map_write_only(GLuint index, void* gpu_stream=nullptr);
-    void gpu_unmap_buffer(GLuint index);
+    void gpu_unmap(GLuint index);
 
     void use();
 

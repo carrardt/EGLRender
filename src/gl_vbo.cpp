@@ -136,7 +136,7 @@ namespace EGLRender
     return nullptr;
   }
   
-  void GLVertexBuffers::gpu_unmap_buffer(GLuint index)
+  void GLVertexBuffers::gpu_unmap(GLuint index)
   {
     std::cerr<<"Not implemented"<<std::endl;
     std::abort();
