@@ -25,7 +25,11 @@ under the License.
 
 #ifdef EGLRENDER_USE_CUDA
 #include <cuda_gl_interop.h>
-#define EGL_GPU_COMPUTE_API_CHECK( expr ) if( ( expr ) != cudaSuccess ) { std::cerr << "Error: "<< #expr << " failed" << std::endl; std::abort(); } (void)0
+#define EGL_GPU_COMPUTE_API_CHECK( expr ) \
+  do { auto _cu_err_code = ( expr ) ; \
+  if( _cu_err_code != cudaSuccess ) { \
+    std::cerr << #expr << " failed with error : "<< cudaGetErrorString(_cu_err_code) << std::endl; \
+    std::abort(); } }while(0)
 #endif
 
 #ifndef EGL_GPU_COMPUTE_API_CHECK
@@ -115,9 +119,9 @@ namespace EGLRender
     if( m_buffer_resource[index] == nullptr )
     {
 #     ifdef EGLRENDER_USE_CUDA
-      cudaGraphicsResource* resource_ptr = nullptr;
-      EGL_GPU_COMPUTE_API_CHECK( cudaGraphicsGLRegisterBuffer ( & resource_ptr , m_vbo[index], cudaGraphicsRegisterFlagsWriteDiscard ) );
-      m_buffer_resource[index] = resource_ptr;
+      cudaGraphicsResource_t cu_res = nullptr;
+      EGL_GPU_COMPUTE_API_CHECK( cudaGraphicsGLRegisterBuffer ( & cu_res , m_vbo[index], cudaGraphicsRegisterFlagsWriteDiscard ) );
+      m_buffer_resource[index] = cu_res;
 #     endif
     }
     if( m_buffer_resource[index] == nullptr )
@@ -136,10 +140,17 @@ namespace EGLRender
     return nullptr;
   }
   
-  void GLVertexBuffers::gpu_unmap(GLuint index)
+  void GLVertexBuffers::gpu_unmap(GLuint index, void* gpu_stream)
   {
-    std::cerr<<"Not implemented"<<std::endl;
-    std::abort();
+#   ifdef EGLRENDER_GPU_COMPUTE_API
+#     ifdef EGLRENDER_USE_CUDA
+      EGL_GPU_COMPUTE_API_CHECK( cudaGraphicsUnmapResources(1, (cudaGraphicsResource_t*) m_buffer_resource[index], (cudaStream_t) gpu_stream ) );
+      m_buffer_resource[index] = nullptr;
+#     else
+      std::cerr << "Internal error: unsupported operation" << std::endl;
+      std::abort();
+#     endif
+#   endif
   }
 
   void GLVertexBuffers::use()
