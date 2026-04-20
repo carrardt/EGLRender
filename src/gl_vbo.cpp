@@ -130,10 +130,11 @@ namespace EGLRender
       std::abort();
     }
 #   ifdef EGLRENDER_USE_CUDA
-    EGL_GPU_COMPUTE_API_CHECK( cudaGraphicsMapResources (1, (cudaGraphicsResource_t*) m_buffer_resource[index], (cudaStream_t) gpu_stream ) );
+    cudaGraphicsResource_t cu_res = (cudaGraphicsResource_t) m_buffer_resource[index];
+    EGL_GPU_COMPUTE_API_CHECK( cudaGraphicsMapResources (1, & cu_res, (cudaStream_t) gpu_stream ) );
     void * gpu_dev_ptr = nullptr;
     size_t map_sz = 0;
-    EGL_GPU_COMPUTE_API_CHECK( cudaGraphicsResourceGetMappedPointer( & gpu_dev_ptr, & map_sz, * (cudaGraphicsResource_t*) m_buffer_resource[index] ) );
+    EGL_GPU_COMPUTE_API_CHECK( cudaGraphicsResourceGetMappedPointer( & gpu_dev_ptr, & map_sz, cu_res ) );
     std::cout << "Cuda resource mapped "<<map_sz<<" bytes @"<<gpu_dev_ptr<<" for buffer #"<<m_vbo[index]<<std::endl;
     return gpu_dev_ptr;
 #   endif
@@ -144,8 +145,7 @@ namespace EGLRender
   {
 #   ifdef EGLRENDER_GPU_COMPUTE_API
 #     ifdef EGLRENDER_USE_CUDA
-      EGL_GPU_COMPUTE_API_CHECK( cudaGraphicsUnmapResources(1, (cudaGraphicsResource_t*) m_buffer_resource[index], (cudaStream_t) gpu_stream ) );
-      m_buffer_resource[index] = nullptr;
+      EGL_GPU_COMPUTE_API_CHECK( cudaGraphicsUnmapResources(1, (cudaGraphicsResource_t*) & m_buffer_resource[index], (cudaStream_t) gpu_stream ) );
 #     else
       std::cerr << "Internal error: unsupported operation" << std::endl;
       std::abort();

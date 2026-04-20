@@ -38,6 +38,20 @@ under the License.
     std::cerr << #expr << " failed with error : "<< cudaGetErrorString(_cu_err_code) << std::endl; \
     std::abort(); } }while(0)
 
+
+__global__ void vertex_generator_kernel(float *v, float* a, unsigned int n_points, float phi_base)
+{
+    unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if( i < n_points )
+    {
+      float phi = phi_base + (i*M_PI*2.0/n_points);
+      v[i*3+0] = cos(phi*3.5)*0.8f;
+      v[i*3+1] = sin(phi*4)*0.8f;
+      v[i*3+2] = 0.0f;
+      a[i] = -phi_base*10.0f;
+    }
+}
+
 int main(int argc, char *argv[])
 {
   using namespace EGLRender;
@@ -54,9 +68,23 @@ int main(int argc, char *argv[])
   EGLRenderManager eglm;
   eglm.init_platform( surf_type != EGLRenderSurfaceClass::PBUFFER );
 
-  eglm.create_surface( "main_window", surf_type, 800, 600 );
+  eglm.create_surface( "main_window", surf_type, 1600, 1024 );
   eglm.surface("main_window").make_current();
   std::cout<<"OpenGL "<<gl_string_non_null(glGetString(GL_VERSION))<<std::endl;
+
+  // check if a Compatible Cuda device is associated with the current OpenGL context
+  constexpr unsigned int MAX_CUDA_DEVICES = 16;
+  unsigned int cudaDeviceCount = 0;
+  int cudaDevices[MAX_CUDA_DEVICES];
+  EGL_GPU_COMPUTE_API_CHECK( cudaGLGetDevices( &cudaDeviceCount, cudaDevices, MAX_CUDA_DEVICES, cudaGLDeviceListAll ) );
+  if( cudaDeviceCount == 0 )
+  {
+    std::cerr<<"No compatible Cuda device is attached to current OpenGL context"<<std::endl;
+    std::abort();
+  }
+  std::cout<<"Found "<<cudaDeviceCount<<" Cuda devices : [";
+  for(unsigned int i=0;i<cudaDeviceCount;i++) std::cout<<((i>0)?",":"")<<cudaDevices[i];
+  std::cout<<"]"<<std::endl;
 
   const auto shader_prog_id = eglm.create_shader_program(
     "rotating_triangle" ,
@@ -79,10 +107,10 @@ int main(int argc, char *argv[])
     out vec4 aColor;
     void main() {
         vec4 aPos = gl_in[0].gl_Position;
-        aColor = vec4( clamp(aPos.x,0.0f,1.0f), clamp(aPos.y,0.0f,1.0f), clamp(aPos.x+aPos.y,0.0f,1.0f), 1.0f );
+        aColor = vec4( clamp(aPos.x,0.15f,1.0f), clamp(aPos.y,0.15f,1.0f), clamp(aPos.x+aPos.y,0.15f,1.0f), 1.0f );
         for(int i=0;i<3;i++)
         {
-          gl_Position = gl_in[0].gl_Position + vec4( cos(geomAngle[0]+i*2*3.14159/3)*0.1 , sin(geomAngle[0]+i*2*3.14159/3)*0.1, 0.0 , 0.0 );
+          gl_Position = gl_in[0].gl_Position + vec4( cos(geomAngle[0]+i*2*3.14159/3)*0.02 , sin(geomAngle[0]+i*2*3.14159/3)*0.02, 0.0 , 0.0 );
           EmitVertex();
         }
         EndPrimitive();
@@ -105,7 +133,9 @@ int main(int argc, char *argv[])
   // equivalent to
   // eglm.shader_program("rotating_triangle").use();
 
-  const int n_points = 3;
+  const int grid_size = 16;
+  const int block_size = 64;
+  const int n_points = grid_size * block_size;
   const auto buf_id = eglm.create_vertex_buffers("vertex_attribs",n_points , { GL_FLOAT,3, GL_FLOAT,1 } );
 
   glColorMask (GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
@@ -120,15 +150,14 @@ int main(int argc, char *argv[])
 
     glClear(GL_COLOR_BUFFER_BIT);
 
-    GLfloat* v = (GLfloat*) eglm.vertex_buffers(buf_id).host_map_write_only(0);
-    (*v++)=0.0f;  (*v++)=0.5f; (*v++)=0.0f;
-    (*v++)=-0.5f;  (*v++)=-0.5f; (*v++)=0.0f;
-    (*v++)=0.5f;  (*v++)=-0.5f; (*v++)=0.0f;
-    eglm.vertex_buffers(buf_id).host_unmap(0); v=nullptr;
+    GLfloat* v = (GLfloat*) eglm.vertex_buffers(buf_id).gpu_map_write_only(0);
+    GLfloat* a = (GLfloat*) eglm.vertex_buffers(buf_id).gpu_map_write_only(1);
 
-    GLfloat* a = (GLfloat*) eglm.vertex_buffers(buf_id).host_map_write_only(1);
-    (*a++)=0.0; (*a++)=0.5; (*a++)=1.0;
-    eglm.vertex_buffers(buf_id).host_unmap(1); a=nullptr;
+    vertex_generator_kernel<<<grid_size, block_size>>>(v, a, n_points, 0.0f);
+
+    eglm.vertex_buffers(buf_id).gpu_unmap(1); a=nullptr;
+    eglm.vertex_buffers(buf_id).gpu_unmap(0); v=nullptr;
+
 
     eglm.vertex_buffers(buf_id).use();
     // equivalent to
@@ -168,18 +197,11 @@ int main(int argc, char *argv[])
       auto & glvbos = eglm.vertex_buffers(buf_id);
       // equivalent to
       // auto & glvbos = eglm.vertex_buffer("vertex_attribs");
-      GLfloat* v = (GLfloat*) glvbos.host_map_write_only(0);
-      GLfloat* a = (GLfloat*) glvbos.host_map_write_only(1);
-      for(int j=0;j<n_points;j++)
-      {
-        GLfloat phi = phi_base + (2*M_PI*j/3);
-        v[j*3+0]=std::cos(phi)*0.5f;
-        v[j*3+1]=std::sin(phi)*0.5f;
-        v[j*3+2]=0.0f;
-        a[j] = -phi_base*10.0f;
-      }
-      glvbos.host_unmap(0); v=nullptr;
-      glvbos.host_unmap(1); a=nullptr;
+      GLfloat* v = (GLfloat*) glvbos.gpu_map_write_only(0);
+      GLfloat* a = (GLfloat*) glvbos.gpu_map_write_only(1);
+      vertex_generator_kernel<<<grid_size, block_size>>>(v, a, n_points, phi_base);
+      glvbos.gpu_unmap(0); v=nullptr;
+      glvbos.gpu_unmap(1); a=nullptr;
 
       glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT|GL_STENCIL_BUFFER_BIT);
 
