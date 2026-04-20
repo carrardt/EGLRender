@@ -135,7 +135,6 @@ namespace EGLRender
     void * gpu_dev_ptr = nullptr;
     size_t map_sz = 0;
     EGL_GPU_COMPUTE_API_CHECK( cudaGraphicsResourceGetMappedPointer( & gpu_dev_ptr, & map_sz, cu_res ) );
-    std::cout << "Cuda resource mapped "<<map_sz<<" bytes @"<<gpu_dev_ptr<<" for buffer #"<<m_vbo[index]<<std::endl;
     return gpu_dev_ptr;
 #   endif
     return nullptr;
