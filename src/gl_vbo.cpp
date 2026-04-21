@@ -19,22 +19,10 @@ under the License.
 
 #include <EGLRender/gl_vbo.h>
 #include <EGLRender/egl_error.h>
+#include <EGLRender/cu_graphics_gl.h>
 
 #include <cassert>
 #include <iostream>
-
-#ifdef EGLRENDER_USE_CUDA
-#include <cuda_gl_interop.h>
-#define EGL_GPU_COMPUTE_API_CHECK( expr ) \
-  do { auto _cu_err_code = ( expr ) ; \
-  if( _cu_err_code != cudaSuccess ) { \
-    std::cerr << #expr << " failed with error : "<< cudaGetErrorString(_cu_err_code) << std::endl; \
-    std::abort(); } }while(0)
-#endif
-
-#ifndef EGL_GPU_COMPUTE_API_CHECK
-#define EGL_GPU_COMPUTE_API_CHECK( expr ) (void)0
-#endif
 
 namespace EGLRender
 {
@@ -139,7 +127,7 @@ namespace EGLRender
 #   endif
     return nullptr;
   }
-  
+
   void GLVertexBuffers::gpu_unmap(GLuint index, void* gpu_stream)
   {
 #   ifdef EGLRENDER_GPU_COMPUTE_API
