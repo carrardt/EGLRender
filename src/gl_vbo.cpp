@@ -50,6 +50,8 @@ namespace EGLRender
     glBindBuffer(GL_ARRAY_BUFFER,0);
     glDeleteBuffers(m_vbo.size(), m_vbo.data());
     m_vbo.clear();
+    for(auto r : m_buffer_resource) egl_gpu_compute_unregister_resource( r );
+    m_buffer_resource.clear();
   }
 
   void GLVertexBuffers::set_attrib_formats(std::span<const GLint> attribs)
@@ -97,47 +99,25 @@ namespace EGLRender
 
   void* GLVertexBuffers::gpu_map_write_only(GLuint index, void* gpu_stream)
   {
-#   ifndef EGLRENDER_GPU_COMPUTE_API
-    return nullptr;
-#   endif
     if( index >= m_buffer_resource.size() )
     {
       m_buffer_resource.resize( index + 1 , nullptr );
     }
     if( m_buffer_resource[index] == nullptr )
     {
-#     ifdef EGLRENDER_USE_CUDA
-      cudaGraphicsResource_t cu_res = nullptr;
-      EGL_GPU_COMPUTE_API_CHECK( cudaGraphicsGLRegisterBuffer ( & cu_res , m_vbo[index], cudaGraphicsRegisterFlagsWriteDiscard ) );
-      m_buffer_resource[index] = cu_res;
-#     endif
+      m_buffer_resource[index] = egl_gpu_compute_gl_register_buffer( m_vbo[index] );
     }
     if( m_buffer_resource[index] == nullptr )
     {
       std::cerr << "Internal error: unsupported GPU compute API" << std::endl;
       std::abort();
     }
-#   ifdef EGLRENDER_USE_CUDA
-    cudaGraphicsResource_t cu_res = (cudaGraphicsResource_t) m_buffer_resource[index];
-    EGL_GPU_COMPUTE_API_CHECK( cudaGraphicsMapResources (1, & cu_res, (cudaStream_t) gpu_stream ) );
-    void * gpu_dev_ptr = nullptr;
-    size_t map_sz = 0;
-    EGL_GPU_COMPUTE_API_CHECK( cudaGraphicsResourceGetMappedPointer( & gpu_dev_ptr, & map_sz, cu_res ) );
-    return gpu_dev_ptr;
-#   endif
-    return nullptr;
+    return egl_gpu_compute_map_resource_ptr( m_buffer_resource[index] , gpu_stream );
   }
 
   void GLVertexBuffers::gpu_unmap(GLuint index, void* gpu_stream)
   {
-#   ifdef EGLRENDER_GPU_COMPUTE_API
-#     ifdef EGLRENDER_USE_CUDA
-      EGL_GPU_COMPUTE_API_CHECK( cudaGraphicsUnmapResources(1, (cudaGraphicsResource_t*) & m_buffer_resource[index], (cudaStream_t) gpu_stream ) );
-#     else
-      std::cerr << "Internal error: unsupported operation" << std::endl;
-      std::abort();
-#     endif
-#   endif
+    egl_gpu_compute_unmap_resource( m_buffer_resource[index], gpu_stream );
   }
 
   void GLVertexBuffers::use()

@@ -19,24 +19,19 @@ under the License.
 
 #pragma once
 
-#include <iostream>
-#include <cstdlib>
+#include <EGLRender/egl_platform.h>
 
-#ifdef EGLRENDER_USE_CUDA
-#include <cuda_gl_interop.h>
-#define EGL_GPU_COMPUTE_API_CHECK( expr ) \
-  do { auto _cu_err_code = ( expr ) ; \
-  if( _cu_err_code != cudaSuccess ) { \
-    std::cerr << #expr << " failed with error : "<< cudaGetErrorString(_cu_err_code) << std::endl; \
-    std::abort(); } }while(0)
-#define EGL_GPU_COMPUTE_GL_GET_DEVICES(countPtr,devs,nmax) cudaGLGetDevices(countPtr,devs,nmax,cudaGLDeviceListAll)
-#endif
+#define EGL_GPU_COMPUTE_CHECK_ERROR( expr ) ::EGLRender::egl_gpu_compute_check_error( (expr) , #expr , __FILE__ , __LINE__ )
 
-#ifdef EGLRENDER_USE_HIP
-#error Not Implemented yet
-#endif
+namespace EGLRender
+{
+  void egl_gpu_compute_check_error( int err_code, const char* expr_str="", const char* src_file="", int lineno=0 );
+  void egl_gpu_compute_gl_get_devices(int* countPtr, int * devicesPtr , int maxDeviceCount);
 
-#if !defined(EGLRENDER_USE_CUDA) && !defined(EGLRENDER_USE_HIP)
-#define EGL_GPU_COMPUTE_API_CHECK( expr ) do{ expr; }while(0)
-#define EGL_GPU_COMPUTE_GL_GET_DEVICES(countPtr,devs,nmax) do{*countPtr=0;}while(0)
-#endif
+  void* egl_gpu_compute_gl_register_buffer( GLuint buffer );
+  void* egl_gpu_compute_map_resource_ptr( void* resource_handle, void* gpu_stream_handle=nullptr );
+  void egl_gpu_compute_unmap_resource( void* resource_handle, void* gpu_stream_handle=nullptr );
+  void egl_gpu_compute_unregister_resource( void* resource_handle );
+
+}
+

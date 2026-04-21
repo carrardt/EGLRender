@@ -36,7 +36,7 @@ include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
 find_package(OpenGL COMPONENTS EGL OpenGL)
-set(EGLRENDER_LIBS OpenGL::OpenGL OpenGL::EGL)
+set(EGLRENDER_LIBS OpenGL::EGL OpenGL::OpenGL)
 
 set(EGLRENDER_NATIVE_DISPLAY "X11" CACHE STRING "Native display for EGL on screen rendering")
 set_property(CACHE EGLRENDER_NATIVE_DISPLAY PROPERTY STRINGS X11 GLES WIN)
@@ -75,17 +75,18 @@ if(NOT EGLRENDER_GPU_COMPUTE_API STREQUAL "NONE")
 endif()
 
 add_library(EGLRender SHARED
-	src/egl_render_manager.cpp
-	src/egl_error.cpp
-	src/egl_surface.cpp
-	src/egl_renderer.cpp
-	src/egl_platform.cpp
-	src/gl_shader.cpp
-	src/gl_vbo.cpp
-	src/gl_camera.cpp
-	src/gl_element_buffer.cpp
-	src/native_window_event_handler.cpp
-	src/${EGLRENDER_PLATFORM_SRC})
+  src/egl_render_manager.cpp
+  src/egl_error.cpp
+  src/egl_surface.cpp
+  src/egl_renderer.cpp
+  src/egl_platform.cpp
+  src/gl_shader.cpp
+  src/gl_vbo.cpp
+  src/gl_camera.cpp
+  src/gl_element_buffer.cpp
+  src/native_window_event_handler.cpp
+  src/${EGLRENDER_PLATFORM_SRC}
+  src/cu_graphics_gl.cpp)
 target_compile_definitions(EGLRender PRIVATE ${EGLRENDER_DEFINITIONS})
 target_include_directories(EGLRender PUBLIC
    "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
