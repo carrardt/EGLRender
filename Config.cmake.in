@@ -15,8 +15,6 @@ if(EGLRENDER_GPU_COMPUTE_API STREQUAL "CUDA")
   find_dependency(CUDAToolkit REQUIRED)
 elseif(EGLRENDER_GPU_COMPUTE_API STREQUAL "HIP")
   find_dependency(ROCmCMakeBuildTools REQUIRED)
-else()
-  message(FATAL_ERROR "Unsupported GPU compute API ${EGLRENDER_GPU_COMPUTE_API}")
 endif()
 
 include("${CMAKE_CURRENT_LIST_DIR}/EGLRenderTargets.cmake")
