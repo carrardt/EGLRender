@@ -24,6 +24,7 @@ under the License.
 #include <EGLRender/gl_shader.h>
 #include <EGLRender/gl_vbo.h>
 #include <EGLRender/egl_render_manager.h>
+#include <EGLRender/cu_graphics_gl.h>
 
 #include <iostream>
 #include <fstream>
@@ -74,9 +75,9 @@ int main(int argc, char *argv[])
 
   // check if a Compatible Cuda device is associated with the current OpenGL context
   constexpr unsigned int MAX_CUDA_DEVICES = 16;
-  unsigned int cudaDeviceCount = 0;
+  int cudaDeviceCount = 0;
   int cudaDevices[MAX_CUDA_DEVICES];
-  EGL_GPU_COMPUTE_API_CHECK( cudaGLGetDevices( &cudaDeviceCount, cudaDevices, MAX_CUDA_DEVICES, cudaGLDeviceListAll ) );
+  egl_gpu_compute_gl_get_devices(&cudaDeviceCount, cudaDevices, MAX_CUDA_DEVICES);
   if( cudaDeviceCount == 0 )
   {
     std::cerr<<"No compatible Cuda device is attached to current OpenGL context"<<std::endl;
