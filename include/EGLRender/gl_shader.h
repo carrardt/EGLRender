@@ -77,6 +77,28 @@ namespace EGLRender
     }
   };
 
+
+  struct GLUniformVariable
+  {
+    static inline constexpr size_t MAX_NAME_LEN = 64;
+    char m_name[MAX_NAME_LEN] = { '\0' , };
+    GLint m_type = GL_FLOAT;
+    GLint m_offset = 0; // bytes
+    GLint m_size = 1;   // number of elements
+    GLint m_stride = 4; // bytes
+  };
+
+  struct GLUniformBlock
+  {
+    static inline constexpr size_t MAX_NAME_LEN = 64;
+    GLint m_binding = 0;
+    char m_name[MAX_NAME_LEN] = { '\0' , };
+    std::vector<GLUniformVariable> m_variables;
+//    const GLUniformVariable& variable(int idx);
+//    int variable_id(std:string_view name);
+//    const GLUniformVariable& variable(std:string_view name);
+  };
+
   // GL Shader program encapsulation
   struct GLShaderProgram
   {
@@ -109,8 +131,15 @@ namespace EGLRender
     GLuint m_fragment_shader = compile_shader(m_fragment_shader_source, GL_FRAGMENT_SHADER);
     GLuint m_shader_program  = link_program( m_vertex_shader, m_geometry_shader, m_fragment_shader );
 
+    std::vector<GLUniformBlock> m_uniforms = init_uniform_blocks(m_shader_program);
+
     static GLuint compile_shader(const std::string& shader_source, GLenum shader_type);
     static GLuint link_program(GLuint vertShaderId, GLuint geomShaderId, GLuint fragShaderId);
+    static std::vector<GLUniformBlock> init_uniform_blocks(GLuint prog);
+
+//    const GLUniformBlock& uniform(int id);
+//    int uniform_id(std:string_view name);
+//    const GLUniformBlock& uniform(std:string_view name);
 
     void use() const;
 

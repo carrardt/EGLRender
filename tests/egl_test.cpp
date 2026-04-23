@@ -55,7 +55,12 @@ int main(int argc, char *argv[])
   const auto shader_prog_id = eglm.create_shader_program(
     "rotating_triangle" ,
     /* vertex shader */ R"EOF(
-    #version 330 core
+    #version 430 core
+    layout(binding=0) uniform camera
+    {
+      mat4 modelview;
+      mat4 projection;
+    };
     layout (location = 0) in vec4 aPos;
     layout (location = 1) in float aAngle;
     out float geomAngle;
@@ -66,7 +71,7 @@ int main(int argc, char *argv[])
     }
     )EOF" ,
     /* geometry shader */ R"EOF(
-    #version 330 core
+    #version 430 core
     layout (points) in;
     layout (triangle_strip, max_vertices=3) out;
     in float geomAngle[];
@@ -83,7 +88,7 @@ int main(int argc, char *argv[])
     }
     )EOF" ,
     /* fragment shader */ R"EOF(
-    #version 330 core
+    #version 430 core
     in vec4 aColor;
     out vec4 FragColor;
     void main()

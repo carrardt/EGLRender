@@ -89,7 +89,55 @@ namespace EGLRender
       std::cout << "Program #"<<prog<<" Ok"<<std::endl;
     }
 #   endif
+
     return prog;
+  }
+
+  std::vector<GLUniformBlock> GLShaderProgram::init_uniform_blocks(GLuint prog)
+  {
+    std::vector<GLUniformBlock> blocks;
+    
+    // gather information about shader program
+    GLint uniform_block_count = 0; 
+    glGetProgramiv(prog, GL_ACTIVE_UNIFORM_BLOCKS, &uniform_block_count);
+    for(int i=0; i<uniform_block_count; i++)
+    {
+      GLint b=0;
+      glGetActiveUniformBlockiv(prog, i, GL_UNIFORM_BLOCK_BINDING, &b);
+      if( b >= blocks.size() ) blocks.resize( b+1 );
+      
+      blocks[b].m_binding = b;
+      glGetActiveUniformBlockName(prog, i, blocks[b].MAX_NAME_LEN , nullptr, blocks[b].m_name );
+      
+      GLint variable_count= 0;
+      glGetActiveUniformBlockiv(prog, i, GL_UNIFORM_BLOCK_ACTIVE_UNIFORMS, &variable_count);
+      blocks[b].m_variables.assign( variable_count, GLUniformVariable{} );
+      
+      std::vector<GLint> variables( variable_count , 0 );
+      glGetActiveUniformBlockiv(prog, i, GL_UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES, variables.data() );
+      for(int k= 0; k < variable_count; k++)
+      {
+        glGetActiveUniformName(prog, variables[k], blocks[b].m_variables[k].MAX_NAME_LEN , nullptr, blocks[b].m_variables[k].m_name );
+        glGetActiveUniformsiv(prog, 1, (GLuint *) &variables[k], GL_UNIFORM_TYPE, & blocks[b].m_variables[k].m_type );
+        glGetActiveUniformsiv(prog, 1, (GLuint *) &variables[k], GL_UNIFORM_OFFSET, & blocks[b].m_variables[k].m_offset);
+        glGetActiveUniformsiv(prog, 1, (GLuint *) &variables[k], GL_UNIFORM_SIZE, & blocks[b].m_variables[k].m_size);
+        glGetActiveUniformsiv(prog, 1, (GLuint *) &variables[k], GL_UNIFORM_ARRAY_STRIDE, & blocks[b].m_variables[k].m_stride);
+      }
+    }
+
+#   ifndef NDEBUG
+    std::cout << blocks.size() << " uniform blocks :" << std::endl;
+    for(const auto & b : blocks)
+    {
+      std::cout << "  block '" << b.m_name <<"' bound to index #"<<b.m_binding<<std::endl;
+      for(const auto & v : b.m_variables)
+      {
+        std::cout << "    variable '"<<v.m_name<<"' type="<<gl_enum_to_string(v.m_type)<<", offset="<<v.m_offset<<", size="<<v.m_size<<", stride="<<v.m_stride<<std::endl;
+      }
+    }
+#endif
+    
+    return blocks;
   }
 
   void GLShaderProgram::use() const
