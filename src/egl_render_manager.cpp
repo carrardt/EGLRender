@@ -176,7 +176,7 @@ namespace EGLRender
     auto it = m_camera_names.find(name.data());
     if( it == m_camera_names.end() )
     {
-      std::cerr << "EGL Error: vertex buffer named "<<name<<" not found"<<std::endl;
+      std::cerr << "EGL Error: camera named "<<name<<" not found"<<std::endl;
       std::abort();
     }
     return camera(it->second);

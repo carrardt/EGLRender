@@ -29,35 +29,42 @@ namespace EGLRender
            , u[2] * v[0] - u[0] * v[2]
            , u[0] * v[1] - u[1] * v[0] };
   }
+
   static inline auto dot(const std::array<GLfloat,3> &u, const std::array<GLfloat,3> &v)
   {
     return u[0]*v[0]+u[1]*v[1]+u[2]*v[2];
   }
+
   static inline std::array<GLfloat,3> add(const std::array<GLfloat,3>& u, const std::array<GLfloat,3>& v)
   {
     return { u[0]+v[0] , u[1]+v[1] , u[2]+v[2] };
   }
+
+  static inline std::array<GLfloat,3> sub(const std::array<GLfloat,3>& u, const std::array<GLfloat,3>& v)
+  {
+    return { u[0]-v[0] , u[1]-v[1] , u[2]-v[2] };
+  }
+
+  static inline std::array<GLfloat,3> neg(const std::array<GLfloat,3>& u)
+  {
+    return { -u[0] , -u[1] , -u[2] };
+  }
+  
   static inline auto norm2( const std::array<GLfloat,3> &u ) { return dot(u,u); }
   static inline auto norm( const std::array<GLfloat,3> &u ) { return sqrt(norm2(u)); }
   static inline std::array<GLfloat,3> mul( const std::array<GLfloat,3> &u , const GLfloat s ) { return {u[0]*s,u[1]*s,u[2]*s}; }
-  static inline std::array<GLfloat,3> div( const std::array<GLfloat,3> &u , const GLfloat s ) { return {u[0]/s,u[1]/s,u[2]/s}; }
-  static inline auto normalize( const std::array<GLfloat,3> &u ) { return div(u,norm(u)); }
+  static inline auto normalize( const std::array<GLfloat,3> &u ) { return mul( u , 1.0 / norm(u) ); }
 
-  // This creates a symmetric frustum with horizontal FOV
-  // by converting 4 params (fovx, aspect=w/h, near, far)
-  // to 6 params (l, r, b, t, n, f) 
-  static inline void makeFrustum( GLfloat fovY, GLfloat aspectRatio, GLfloat front, GLfloat back)
+  void GLCamera::lookAt( GLfloat eyeX, GLfloat eyeY, GLfloat eyeZ, GLfloat toX, GLfloat toY, GLfloat toZ)
   {
-    const double DEG2RAD = acos(-1.0f) / 180;
-
-    double tangent = tan(fovY/2 * DEG2RAD);   // tangent of half fovY
-    double height = front * tangent;          // half height of near plane
-    double width = height * aspectRatio;      // half width of near plane
-
-    // params: left, right, bottom, top, near, far
-    glFrustum(-width, width, -height, height, front, back);
+    m_location = { eyeX, eyeY, eyeZ };
+    std::array<GLfloat,3> to = { toX, toY, toZ };
+    m_front = normalize( sub(to,m_location) );
+    m_up = { 0.0f , 1.0f , 0.0f  };
+    m_left = normalize( cross(m_up,m_front) );
+    m_up = normalize( cross(m_front,m_left) );
   }
-    
+
   void GLCamera::tilt( GLfloat h, GLfloat v )
   {
     const GLfloat DEG2RAD = acos(-1.0f) / 180;
@@ -73,11 +80,18 @@ namespace EGLRender
     nfront = add( mul(m_front,hcos) , mul(m_left,hsin) );
     m_left = add( mul(m_left,hcos) , mul(m_front,-hsin) );
     m_front = nfront;
+    
+    m_left = normalize(m_left);
+    m_up = normalize(m_up);
+    m_front = normalize(m_front);
   }
   
   void GLCamera::use()
   {
     constexpr double DEG2RAD = acos(-1.0f) / 180;
+
+    // no, don't use glMatrix* functions, use unform binding, see reference below
+    // https://perso.univ-lyon1.fr/jean-claude.iehl/Public/educ/M1IMAGE/html/group__uniform__buffers.html
 
     glMatrixMode( GL_PROJECTION_MATRIX );
     glLoadIdentity();

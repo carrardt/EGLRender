@@ -37,6 +37,7 @@ namespace EGLRender
     GLfloat m_near = 1.0f;
     GLfloat m_far = 10.0f;
     
+    void lookAt( GLfloat eyeX, GLfloat eyeY, GLfloat eyeZ, GLfloat toX, GLfloat toY, GLfloat toZ);
     void tilt( GLfloat hAngle, GLfloat vAngle );
     void use();
   };

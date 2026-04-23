@@ -114,11 +114,6 @@ if(EGLRENDER_BUILD_TESTS)
   add_executable(egl_test tests/egl_test.cpp)
   target_link_libraries(egl_test EGLRender)
   install(TARGETS egl_test DESTINATION ${CMAKE_INSTALL_BINDIR})
-
-  add_executable(egl_simple_camera tests/egl_simple_camera.cpp)
-  target_link_libraries(egl_simple_camera EGLRender)
-  install(TARGETS egl_simple_camera DESTINATION ${CMAKE_INSTALL_BINDIR})
-
   if(EGLRENDER_GPU_COMPUTE_API STREQUAL "CUDA")
     enable_language(CUDA)
     add_executable(egl_cugraphis tests/egl_cugraphics.cu)
