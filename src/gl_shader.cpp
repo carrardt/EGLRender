@@ -21,6 +21,8 @@ under the License.
 #include <EGLRender/egl_error.h>
 #include <iostream>
 #include <memory>
+#include <cassert>
+#include <unordered_map>
 
 namespace EGLRender
 {
@@ -141,8 +143,9 @@ namespace EGLRender
     return blocks;
   }
 
-  void GLShaderProgram::use() const
+  void GLShaderProgram::use()
   {
+    for(auto & u : m_uniforms) u.unmap_buffer();
     m_pipeline_config.use();
     glUseProgram( m_shader_program );
   }
@@ -156,7 +159,7 @@ namespace EGLRender
     glDeleteShader(m_fragment_shader);
   }
 
-  const GLUniformBlock& GLShaderProgram::uniform(int i)
+  GLUniformBlock& GLShaderProgram::uniform(int i)
   {
     return m_uniforms[i];
   }
@@ -167,13 +170,14 @@ namespace EGLRender
     return -1;
   }
   
-  const GLUniformBlock& GLShaderProgram::uniform(std::string_view name)
+  GLUniformBlock& GLShaderProgram::uniform(std::string_view name)
   {
     return uniform(uniform_id(name));
   }
 
   const GLUniformVariableAccessor GLUniformBlock::variable(int i)
   {
+    map_buffer();
     return { m_variables[i] , m_buffer_mapping };
   }
   
@@ -185,24 +189,71 @@ namespace EGLRender
   
   const GLUniformVariableAccessor GLUniformBlock::variable(std::string_view name)
   {
-    return { m_variables[variable_id(name)] , m_buffer_mapping };
+    return variable( variable_id(name) );
+  }
+
+
+  int GLUniformVariable::size() const
+  {
+    static const std::unordered_map<GLenum,int> gl_size_map =
+      { { GL_BOOL , 4 }
+      , { GL_INT , 4 }
+      , { GL_UNSIGNED_INT , 4 }
+      , { GL_FLOAT , 4 }
+      , { GL_FLOAT_VEC2 , 2*4 }
+      , { GL_FLOAT_VEC3 , 3*4 }
+      , { GL_FLOAT_VEC4 , 4*4 }
+      , { GL_FLOAT_MAT3 , 9*4 }
+      , { GL_FLOAT_MAT4 , 16*4 } };
+    auto it = gl_size_map.find( m_type );
+    if( it == gl_size_map.end() )
+    {
+      std::cerr<<"Unrecognized variable type "<<gl_enum_to_string(m_type)<<std::endl;
+      std::abort();
+    }
+    return (m_stride>0) ? (m_stride * m_size) : (it->second * m_size);
   }
 
   void GLUniformBlock::map_buffer()
   {
     if( m_buffer == 0 )
     {
-      std::cout << "mapping uniform buffer" << std::endl;
-      
+      glGenBuffers(1,&m_buffer);
+      glBindBufferBase(GL_UNIFORM_BUFFER,m_binding,m_buffer);
+      int uniform_size = m_variables.back().m_offset + m_variables.back().size();
+      //std::cout << "bind uniform buffer #"<<m_buffer<<" to block #"<<m_binding <<" and resize to "<<uniform_size<<std::endl;
+      glNamedBufferData(m_buffer, uniform_size, nullptr, GL_DYNAMIC_DRAW);
+    }
+    if( m_buffer_mapping == nullptr )
+    {
+      //std::cout << "map uniform buffer #"<<m_buffer << std::endl;
+      m_buffer_mapping = glMapNamedBuffer(m_buffer, GL_WRITE_ONLY);
+      assert( m_buffer_mapping != nullptr );
     }
   }
   
   void GLUniformBlock::unmap_buffer()
   {
+    if( m_buffer_mapping != nullptr )
+    {
+      glUnmapNamedBuffer(m_buffer);
+      m_buffer_mapping = nullptr;
+    }
+  }
+
+  GLUniformBlock::~GLUniformBlock()
+  {
+    unmap_buffer();
+    if(m_buffer!=0)
+    {
+      glDeleteBuffers(1,&m_buffer);
+      m_buffer = 0;
+    }
   }
 
   void GLUniformVariableAccessor::set(GLfloat value) const
   {
+    assert( m_mapped_ptr != nullptr );
     GLubyte* bptr = ((GLubyte*)m_mapped_ptr) + m_variable.m_offset;
     if( m_variable.m_type==GL_BOOL || m_variable.m_type==GL_INT || m_variable.m_type==GL_UNSIGNED_INT )
     {
@@ -215,6 +266,7 @@ namespace EGLRender
     else
     {
       std::cerr<<"Cannot set a uniform of type "<<gl_enum_to_string(m_variable.m_type)<<" from GLfloat value"<<std::endl;
+      std::abort();
     }
   }
   

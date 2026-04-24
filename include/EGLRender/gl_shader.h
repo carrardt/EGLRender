@@ -85,6 +85,7 @@ namespace EGLRender
     GLint m_offset = 0; // bytes
     GLint m_size = 1;   // number of elements
     GLint m_stride = 4; // bytes
+    int size() const;
   };
 
   struct GLUniformVariableAccessor
@@ -101,7 +102,7 @@ namespace EGLRender
     GLint m_binding = 0;
     char m_name[MAX_NAME_LEN] = { '\0' , };
     std::vector<GLUniformVariable> m_variables;
-    GLint m_buffer = 0;
+    GLuint m_buffer = 0;
     void * m_buffer_mapping = nullptr;
     
     void map_buffer();
@@ -110,6 +111,8 @@ namespace EGLRender
     const GLUniformVariableAccessor variable(int id);
     int variable_id(std::string_view name);
     const GLUniformVariableAccessor variable(std::string_view name);
+    
+    ~GLUniformBlock();
   };
 
   // GL Shader program encapsulation
@@ -150,11 +153,11 @@ namespace EGLRender
     static GLuint link_program(GLuint vertShaderId, GLuint geomShaderId, GLuint fragShaderId);
     static std::vector<GLUniformBlock> init_uniform_blocks(GLuint prog);
 
-    const GLUniformBlock& uniform(int id);
+    GLUniformBlock& uniform(int id);
     int uniform_id(std::string_view name);
-    const GLUniformBlock& uniform(std::string_view name);
+    GLUniformBlock& uniform(std::string_view name);
 
-    void use() const;
+    void use();
 
     ~GLShaderProgram();
   };

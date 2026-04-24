@@ -99,9 +99,20 @@ int main(int argc, char *argv[])
     )EOF" ,
     { .m_enable_flags = { GL_PROGRAM_POINT_SIZE } }
   );
+
+  auto & shader = eglm.shader_program(shader_prog_id);
+
   std::cout << "Pipeline config :" << std::boolalpha << std::endl;
-  eglm.shader_program(shader_prog_id).m_pipeline_config.to_stream( std::cout );
-  eglm.shader_program(shader_prog_id).use();
+  shader.m_pipeline_config.to_stream( std::cout );
+  //shader.use();
+
+  const GLfloat mat[16] = { 1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1 };
+
+  shader.uniform("camera").variable("npasses").set(3);
+  shader.uniform("camera").variable("modelview").set(mat,16);
+    
+  shader.use();
+
   // equivalent to
   // eglm.shader_program("rotating_triangle").use();
 
