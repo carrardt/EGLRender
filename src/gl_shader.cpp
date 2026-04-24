@@ -24,6 +24,7 @@ under the License.
 
 namespace EGLRender
 {
+
   void GLPipelineConfig::use() const
   {
     for(auto e:m_enable_flags) glEnable( e );
@@ -153,6 +154,98 @@ namespace EGLRender
     glDeleteShader(m_vertex_shader);
     glDeleteShader(m_geometry_shader);
     glDeleteShader(m_fragment_shader);
+  }
+
+  const GLUniformBlock& GLShaderProgram::uniform(int i)
+  {
+    return m_uniforms[i];
+  }
+  
+  int GLShaderProgram::uniform_id(std::string_view name)
+  {
+    for(size_t i=0;i<m_uniforms.size();i++) if(name==m_uniforms[i].m_name) return i;
+    return -1;
+  }
+  
+  const GLUniformBlock& GLShaderProgram::uniform(std::string_view name)
+  {
+    return uniform(uniform_id(name));
+  }
+
+  const GLUniformVariableAccessor GLUniformBlock::variable(int i)
+  {
+    return { m_variables[i] , m_buffer_mapping };
+  }
+  
+  int GLUniformBlock::variable_id(std::string_view name)
+  {
+    for(size_t i=0;i<m_variables.size();i++) if(name==m_variables[i].m_name) return i;
+    return -1;
+  }
+  
+  const GLUniformVariableAccessor GLUniformBlock::variable(std::string_view name)
+  {
+    return { m_variables[variable_id(name)] , m_buffer_mapping };
+  }
+
+  void GLUniformBlock::map_buffer()
+  {
+    if( m_buffer == 0 )
+    {
+      std::cout << "mapping uniform buffer" << std::endl;
+      
+    }
+  }
+  
+  void GLUniformBlock::unmap_buffer()
+  {
+  }
+
+  void GLUniformVariableAccessor::set(GLfloat value) const
+  {
+    GLubyte* bptr = ((GLubyte*)m_mapped_ptr) + m_variable.m_offset;
+    if( m_variable.m_type==GL_BOOL || m_variable.m_type==GL_INT || m_variable.m_type==GL_UNSIGNED_INT )
+    {
+      * (GLint*) bptr  = value;
+    }
+    else if( m_variable.m_type==GL_FLOAT )
+    {
+      * (GLfloat*) bptr = value;
+    }
+    else
+    {
+      std::cerr<<"Cannot set a uniform of type "<<gl_enum_to_string(m_variable.m_type)<<" from GLfloat value"<<std::endl;
+    }
+  }
+  
+  void GLUniformVariableAccessor::set(const GLfloat* value, GLuint n) const
+  {
+    if( n==1 )
+    {
+      this->set( *value );
+    }
+    else
+    {
+      if( (m_variable.m_type==GL_FLOAT_VEC2 && n==2*m_variable.m_size)
+       || (m_variable.m_type==GL_FLOAT_VEC3 && n==3*m_variable.m_size)
+       || (m_variable.m_type==GL_FLOAT_VEC4 && n==4*m_variable.m_size)
+       || (m_variable.m_type==GL_FLOAT_MAT3 && n==9*m_variable.m_size)
+       || (m_variable.m_type==GL_FLOAT_MAT4 && n==16*m_variable.m_size) )
+      {
+        int vecsize = n / m_variable.m_size;
+        for(int ai=0;ai<m_variable.m_size;ai++)
+        {
+          GLubyte* bptr = ((GLubyte*)m_mapped_ptr) + m_variable.m_offset + m_variable.m_stride * ai;
+          GLfloat * fptr = (GLfloat*) bptr;          
+          for(int vi=0;vi<vecsize;vi++) fptr[vi] = value[ai*vecsize+vi];
+        }
+      }
+      else
+      {
+        std::cerr<<"Cannot set variable "<<gl_enum_to_string(m_variable.m_type)<<" "<<m_variable.m_name<<"["<<m_variable.m_size<<"] with "<<n<<" values"<<std::endl;
+        std::abort();
+      }
+    }
   }
 
 }

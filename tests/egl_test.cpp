@@ -60,6 +60,7 @@ int main(int argc, char *argv[])
     {
       mat4 modelview;
       mat4 projection;
+      uint npasses;
     };
     layout (location = 0) in vec4 aPos;
     layout (location = 1) in float aAngle;
