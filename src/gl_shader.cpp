@@ -25,8 +25,6 @@ under the License.
 #include <cassert>
 #include <filesystem>
 
-#include "gl_named_strings.hxx"
-
 namespace EGLRender
 {
   void GLPipelineConfig::use() const
@@ -41,14 +39,17 @@ namespace EGLRender
   }
 
   GLuint GLShaderProgram::compile_shader(const std::string& shader_source, GLenum shader_type)
-  {
-    GLShaderProgram::load_shader_includes();
-    
+  {    
     const char * src [] = { shader_source.data() };
     if( shader_source.empty() ) return 0;
     GLuint shaderId = glCreateShader(shader_type);
     glShaderSource(shaderId, 1, src, NULL);
+
     glCompileShader(shaderId);
+    auto glNamedStringARBProc = (PFNGLCOMPILESHADERINCLUDEARBPROC) eglGetProcAddress("glCompileShaderIncludeARB");
+    const GLchar * incpath [] = { "/" };
+    glNamedStringARBProc(shaderId,1, incpath, nullptr);
+    
     GLint compile_status = 0;
     glGetShaderiv(shaderId, GL_COMPILE_STATUS, &compile_status);
     if( ! compile_status )

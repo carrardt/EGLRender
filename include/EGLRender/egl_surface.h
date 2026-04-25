@@ -38,6 +38,11 @@ namespace EGLRender
 
   struct EGLRenderSurface
   {
+    // first time a GL context is made current,
+    // we may want to load a bunch of ready to use resources,
+    // such as named strings (for shader includes) or others.
+    static bool s_gl_context_addons_loaded;
+    
     const EGLRenderer * m_egl = nullptr;
 
     EGLRenderSurfaceClass m_surface_type = EGLRenderSurfaceClass::PBUFFER;

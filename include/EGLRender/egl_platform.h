@@ -37,8 +37,11 @@ namespace EGLRender
 
   const char * gl_string_non_null(const GLubyte* s);
   GLuint gl_type_bytes(GLenum t);
-  const std::string& gl_enum_to_string(GLenum t);
+  const std::string_view gl_enum_to_string(GLenum t);
   GLenum gl_enum_from_string(std::string_view name);
   GLenum gl_enum_from_string(const std::string& name);
   bool string_is_gl_enum(std::string_view name);
+  
+  void platform_add_named_string(std::string_view name, std::string_view data);
+  const std::string_view platform_get_named_string(std::string_view name);
 }

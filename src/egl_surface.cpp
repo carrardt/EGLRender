@@ -19,11 +19,14 @@ under the License.
 
 #include <EGLRender/egl_surface.h>
 #include <EGLRender/egl_error.h>
-
 #include <iostream>
+
+#include "gl_named_strings.hxx"
 
 namespace EGLRender
 {
+
+  bool EGLRenderSurface::s_gl_context_addons_loaded = false;
 
   const char* render_surface_type_as_string(EGLRenderSurfaceClass surf_type)
   {
@@ -111,6 +114,17 @@ namespace EGLRender
   {
     eglMakeCurrent( m_egl->m_eglDpy, m_eglSurf, m_eglSurf, m_eglCtx );
     EGL_CHECK_ERROR();
+    if( ! s_gl_context_addons_loaded )
+    {
+      s_gl_context_addons_loaded = true;
+      int i = 0;
+      while( GL_NAMED_STRINGS[i][0] != nullptr )
+      {
+        std::cout<<"add named string '"<<GL_NAMED_STRINGS[i][0]<<"'"<<std::endl;
+        platform_add_named_string(GL_NAMED_STRINGS[i][0],GL_NAMED_STRINGS[i][1]);
+        ++i;
+      }
+    }
   }
 
   void EGLRenderSurface::swap_buffers()

@@ -57,13 +57,13 @@ int main(int argc, char *argv[])
     /* vertex shader */ R"EOF(
     #version 430 core
     #extension GL_ARB_shading_language_include : require
-    //#include "camera.glsl"
+    #include "uniform/camera"
     layout (location = 0) in vec4 aPos;
     layout (location = 1) in float aAngle;
     out float geomAngle;
     void main()
     {
-        gl_Position = vec4(aPos.x, aPos.y*npasses, aPos.z, 1.0);
+        gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);
         geomAngle = aAngle;
     }
     )EOF" ,
@@ -102,10 +102,9 @@ int main(int argc, char *argv[])
   shader.m_pipeline_config.to_stream( std::cout );
   //shader.use();
 
-  const GLfloat mat[16] = { 1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1 };
-
-  shader.uniform("camera").variable("npasses").set(3);
-  shader.uniform("camera").variable("modelview").set(mat,16);
+  //const GLfloat mat[16] = { 1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1 };
+  //shader.uniform("camera").variable("npasses").set(3);
+  //shader.uniform("camera").variable("modelview").set(mat,16);
     
   shader.use();
 

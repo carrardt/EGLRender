@@ -119,9 +119,9 @@ namespace EGLRender
     return 0;
   }
 
-  const std::string& gl_enum_to_string(GLenum t)
+  const std::string_view gl_enum_to_string(GLenum t)
   {
-    static const std::string not_found = "<unknown>";
+    static const char* not_found = "<unknown-enum>";
     auto it = g_gl_enum_string_map.find(t);
     if( it != g_gl_enum_string_map.end() ) return it->second;
     else return not_found;
@@ -134,7 +134,6 @@ namespace EGLRender
 
   GLenum gl_enum_from_string(std::string_view t)
   {
-    static const std::string not_found = "<unknown>";
     auto it = g_gl_string_enum_map.find(t.data());
     if( it != g_gl_string_enum_map.end() ) return it->second;
     else return GL_NONE;
@@ -143,6 +142,17 @@ namespace EGLRender
   GLenum gl_enum_from_string(const std::string& name)
   {
     return gl_enum_from_string( std::string_view(name) );
+  }
+
+  static std::map<std::string,std::string> g_named_strings = {};
+  void platform_add_named_string(std::string_view name, std::string_view data)
+  {
+    g_named_strings[std::string(name)] = data;
+  }
+  
+  const std::string_view platform_get_named_string(std::string_view name)
+  {
+    return g_named_strings[std::string(name)];
   }
 
 }
