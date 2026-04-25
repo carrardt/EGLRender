@@ -22,6 +22,7 @@ under the License.
 #include "egl_platform.h"
 #include <string>
 #include <iostream>
+#include <map>
 
 namespace EGLRender
 {
@@ -118,6 +119,9 @@ namespace EGLRender
   // GL Shader program encapsulation
   struct GLShaderProgram
   {
+    static std::map<std::string,std::string> s_shader_includes;
+    static void load_shader_includes(const std::string& base_dir="");
+    
     std::string m_vertex_shader_source =
   R"EOF(
         #version 330 core

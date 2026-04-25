@@ -21,12 +21,14 @@ under the License.
 #include <EGLRender/egl_error.h>
 #include <iostream>
 #include <memory>
+#include <mutex>
 #include <cassert>
-#include <unordered_map>
+#include <filesystem>
+
+#include "gl_named_strings.hxx"
 
 namespace EGLRender
 {
-
   void GLPipelineConfig::use() const
   {
     for(auto e:m_enable_flags) glEnable( e );
@@ -40,6 +42,8 @@ namespace EGLRender
 
   GLuint GLShaderProgram::compile_shader(const std::string& shader_source, GLenum shader_type)
   {
+    GLShaderProgram::load_shader_includes();
+    
     const char * src [] = { shader_source.data() };
     if( shader_source.empty() ) return 0;
     GLuint shaderId = glCreateShader(shader_type);
@@ -195,7 +199,7 @@ namespace EGLRender
 
   int GLUniformVariable::size() const
   {
-    static const std::unordered_map<GLenum,int> gl_size_map =
+    static const std::map<GLenum,int> gl_size_map =
       { { GL_BOOL , 4 }
       , { GL_INT , 4 }
       , { GL_UNSIGNED_INT , 4 }

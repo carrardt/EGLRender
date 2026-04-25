@@ -56,18 +56,14 @@ int main(int argc, char *argv[])
     "rotating_triangle" ,
     /* vertex shader */ R"EOF(
     #version 430 core
-    layout(binding=0) uniform camera
-    {
-      mat4 modelview;
-      mat4 projection;
-      uint npasses;
-    };
+    #extension GL_ARB_shading_language_include : require
+    //#include "camera.glsl"
     layout (location = 0) in vec4 aPos;
     layout (location = 1) in float aAngle;
     out float geomAngle;
     void main()
     {
-        gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);
+        gl_Position = vec4(aPos.x, aPos.y*npasses, aPos.z, 1.0);
         geomAngle = aAngle;
     }
     )EOF" ,
@@ -79,7 +75,7 @@ int main(int argc, char *argv[])
     out vec4 aColor;
     void main() {
         vec4 aPos = gl_in[0].gl_Position;
-        aColor = vec4( clamp(aPos.x,0.0f,1.0f), clamp(aPos.y,0.0f,1.0f), clamp(aPos.x+aPos.y,0.0f,1.0f), 1.0f );
+        aColor = vec4( clamp(aPos.x,0.1f,1.0f), clamp(aPos.y,0.1f,1.0f), clamp(aPos.x+aPos.y,0.1f,1.0f), 1.0f );
         for(int i=0;i<3;i++)
         {
           gl_Position = gl_in[0].gl_Position + vec4( cos(geomAngle[0]+i*2*3.14159/3)*0.1 , sin(geomAngle[0]+i*2*3.14159/3)*0.1, 0.0 , 0.0 );
@@ -116,7 +112,7 @@ int main(int argc, char *argv[])
   // equivalent to
   // eglm.shader_program("rotating_triangle").use();
 
-  const int n_points = 3;
+  const int n_points = 16;
   const auto buf_id = eglm.create_vertex_buffers("vertex_attribs",n_points , { GL_FLOAT,3, GL_FLOAT,1 } );
 
   glColorMask (GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
@@ -131,15 +127,22 @@ int main(int argc, char *argv[])
 
     glClear(GL_COLOR_BUFFER_BIT);
 
-    GLfloat* v = (GLfloat*) eglm.vertex_buffers(buf_id).host_map_write_only(0);
-    (*v++)=0.0f;  (*v++)=0.5f; (*v++)=0.0f;
-    (*v++)=-0.5f;  (*v++)=-0.5f; (*v++)=0.0f;
-    (*v++)=0.5f;  (*v++)=-0.5f; (*v++)=0.0f;
-    eglm.vertex_buffers(buf_id).host_unmap(0); v=nullptr;
-
-    GLfloat* a = (GLfloat*) eglm.vertex_buffers(buf_id).host_map_write_only(1);
-    (*a++)=0.0; (*a++)=0.5; (*a++)=1.0;
-    eglm.vertex_buffers(buf_id).host_unmap(1); a=nullptr;
+    GLfloat phi_base = 0.0f;
+    auto & glvbos = eglm.vertex_buffers(buf_id);
+    // equivalent to
+    // auto & glvbos = eglm.vertex_buffer("vertex_attribs");
+    GLfloat* v = (GLfloat*) glvbos.host_map_write_only(0);
+    GLfloat* a = (GLfloat*) glvbos.host_map_write_only(1);
+    for(int j=0;j<n_points;j++)
+    {
+      GLfloat phi = phi_base + (2*M_PI*j/n_points);
+      v[j*3+0]=std::cos(phi)*0.5f;
+      v[j*3+1]=std::sin(phi)*0.5f;
+      v[j*3+2]=0.0f;
+      a[j] = -phi_base*10.0f;
+    }
+    glvbos.host_unmap(0); v=nullptr;
+    glvbos.host_unmap(1); a=nullptr;
 
     eglm.vertex_buffers(buf_id).use();
     // equivalent to
@@ -175,7 +178,6 @@ int main(int argc, char *argv[])
       ren_surf.make_current();
 
       GLfloat phi_base = i*0.003f;
-
       auto & glvbos = eglm.vertex_buffers(buf_id);
       // equivalent to
       // auto & glvbos = eglm.vertex_buffer("vertex_attribs");
@@ -183,7 +185,7 @@ int main(int argc, char *argv[])
       GLfloat* a = (GLfloat*) glvbos.host_map_write_only(1);
       for(int j=0;j<n_points;j++)
       {
-        GLfloat phi = phi_base + (2*M_PI*j/3);
+        GLfloat phi = phi_base + (2*M_PI*j/n_points);
         v[j*3+0]=std::cos(phi)*0.5f;
         v[j*3+1]=std::sin(phi)*0.5f;
         v[j*3+2]=0.0f;

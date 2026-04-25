@@ -74,6 +74,26 @@ if(NOT EGLRENDER_GPU_COMPUTE_API STREQUAL "NONE")
   endif()
 endif()
 
+# scan shaders and build named strings
+file(GLOB_RECURSE SHADER_FILES RELATIVE ${PROJECT_SOURCE_DIR}/shaders "*.glsl")
+set(GL_NAMED_STRINGS_FILE "${CMAKE_CURRENT_BINARY_DIR}/gen/gl_named_strings.hxx")
+file(REMOVE ${GL_NAMED_STRINGS_FILE})
+message(STATUS "generating shader database ${GL_NAMED_STRINGS_FILE}")
+file(WRITE "${GL_NAMED_STRINGS_FILE}" "#pragma once\nnamespace EGLRender{\nconst char* GL_NAMED_STRINGS[][2]={\n")
+foreach(SHADER ${SHADER_FILES})
+  get_filename_component(SHADER_NAME ${SHADER} NAME_WE)
+  get_filename_component(SHADER_SUBDIR ${SHADER} DIRECTORY)
+  set(SHADER_PREFIX "")
+  if(SHADER_SUBDIR)
+    set(SHADER_PREFIX "${SHADER_SUBDIR}/")
+  endif()
+  message(STATUS "add shader include ${SHADER_PREFIX}${SHADER_NAME}")
+  file(APPEND ${GL_NAMED_STRINGS_FILE} "{ \"${SHADER_PREFIX}${SHADER_NAME}\" , R\"EOF(\n")
+  file(READ ${PROJECT_SOURCE_DIR}/shaders/${SHADER} SHADER_SRC)
+  file(APPEND ${GL_NAMED_STRINGS_FILE} "${SHADER_SRC}\n)EOF\"},")
+endforeach()
+file(APPEND ${GL_NAMED_STRINGS_FILE} "{nullptr,nullptr} };\n } // end of namespace EGLRender\n")
+
 add_library(EGLRender SHARED
   src/egl_render_manager.cpp
   src/egl_error.cpp
@@ -89,7 +109,7 @@ add_library(EGLRender SHARED
   src/cu_graphics_gl.cpp)
 target_compile_definitions(EGLRender PRIVATE ${EGLRENDER_DEFINITIONS})
 target_include_directories(EGLRender PUBLIC
-   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include;${CMAKE_CURRENT_BINARY_DIR}/gen>"
    "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>")
 target_link_libraries(EGLRender PUBLIC ${EGLRENDER_LIBS})
 set_property(TARGET EGLRender PROPERTY VERSION ${PROJECT_VERSION})
