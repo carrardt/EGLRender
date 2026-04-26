@@ -23,7 +23,7 @@ under the License.
 #include <memory>
 #include <mutex>
 #include <cassert>
-#include <filesystem>
+#include <regex>
 
 namespace EGLRender
 {
@@ -38,18 +38,31 @@ namespace EGLRender
     glStencilOp( m_stencil_op_sfail, m_stencil_op_dpfail, m_stencil_op_dppass );
   }
 
+  std::string GLShaderProgram::parse_shader_includes(const std::string& shader_source)
+  {
+    std::string input = shader_source;
+    auto r = std::regex("[ \t]*#[ \t]*extension[ \t]+GL_ARB_shading_language_include[^\n]*\n");
+    input = std::regex_replace(input,r,"// removed #extension GL_ARB_shading_language_include\n");
+    r = std::regex("#include[ \t]+[<\"].+[>\"][ \t]*\n");
+    for (std::smatch sm; regex_search(input, sm, r);)
+    {
+      auto inc = sm.str();
+      auto s = inc.find_first_of("<\"");
+      auto e = inc.find_first_of(">\"",s+1);
+      auto incname = inc.substr( s+1 , e-s-1 );
+      input = input.replace( sm.position() , sm.length() , platform_get_named_string(incname) ); //sm.suffix();
+    }
+    return input;
+  }
+
   GLuint GLShaderProgram::compile_shader(const std::string& shader_source, GLenum shader_type)
-  {    
-    const char * src [] = { shader_source.data() };
+  {
+    auto parsed_shader_source = parse_shader_includes(shader_source);
+    const char * src [] = { parsed_shader_source.data() };
     if( shader_source.empty() ) return 0;
     GLuint shaderId = glCreateShader(shader_type);
     glShaderSource(shaderId, 1, src, NULL);
-
     glCompileShader(shaderId);
-    auto glNamedStringARBProc = (PFNGLCOMPILESHADERINCLUDEARBPROC) eglGetProcAddress("glCompileShaderIncludeARB");
-    const GLchar * incpath [] = { "/" };
-    glNamedStringARBProc(shaderId,1, incpath, nullptr);
-    
     GLint compile_status = 0;
     glGetShaderiv(shaderId, GL_COMPILE_STATUS, &compile_status);
     if( ! compile_status )

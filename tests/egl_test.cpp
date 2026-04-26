@@ -57,7 +57,7 @@ int main(int argc, char *argv[])
     /* vertex shader */ R"EOF(
     #version 430 core
     #extension GL_ARB_shading_language_include : require
-    #include "uniform/camera"
+    #include <uniform/camera>
     layout (location = 0) in vec4 aPos;
     layout (location = 1) in float aAngle;
     out float geomAngle;

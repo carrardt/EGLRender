@@ -153,6 +153,7 @@ namespace EGLRender
 
     std::vector<GLUniformBlock> m_uniforms = init_uniform_blocks(m_shader_program);
 
+    static std::string parse_shader_includes(const std::string& shader_source);
     static GLuint compile_shader(const std::string& shader_source, GLenum shader_type);
     static GLuint link_program(GLuint vertShaderId, GLuint geomShaderId, GLuint fragShaderId);
     static std::vector<GLUniformBlock> init_uniform_blocks(GLuint prog);

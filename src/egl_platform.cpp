@@ -152,7 +152,7 @@ namespace EGLRender
   
   const std::string_view platform_get_named_string(std::string_view name)
   {
-    return g_named_strings[std::string(name)];
+    return g_named_strings[name.data()];
   }
 
 }
