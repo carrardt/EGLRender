@@ -137,13 +137,25 @@ namespace EGLRender
   {
     return * m_programs[id];
   }
+  
+  std::shared_ptr<GLShaderProgram> EGLRenderManager::shader_program_ptr(int id)
+  {
+    return m_programs[id];
+  }
+
+  int EGLRenderManager::shader_program_id(std::string_view name)
+  {
+    auto it = m_prog_names.find(name.data());
+    if( it == m_prog_names.end() ) return -1;
+    else return it->second;
+  }
 
   GLShaderProgram& EGLRenderManager::shader_program(std::string_view name)
   {
     auto it = m_prog_names.find(name.data());
     if( it == m_prog_names.end() )
     {
-      std::cerr << "EGL Error: shader program named "<<name<<" not found"<<std::endl;
+      std::cerr << "EGL Error: camera named "<<name<<" not found"<<std::endl;
       std::abort();
     }
     return shader_program(it->second);
@@ -155,7 +167,7 @@ namespace EGLRender
     if( it != m_camera_names.end() ) return it->second;
     const auto id = m_cameras.size();
     m_camera_names[name.data()] = id;
-    m_cameras.push_back( new GLCamera{} );
+    m_cameras.emplace_back( new UniformCameraMatrix{} );
     return id;
   }
 
@@ -166,12 +178,12 @@ namespace EGLRender
     else return -1;
   }
 
-  GLCamera& EGLRenderManager::camera(int id)
+  UniformCameraMatrix& EGLRenderManager::camera(int id)
   {
     return * m_cameras[id];
   }
 
-  GLCamera& EGLRenderManager::camera(std::string_view name)
+  UniformCameraMatrix& EGLRenderManager::camera(std::string_view name)
   {
     auto it = m_camera_names.find(name.data());
     if( it == m_camera_names.end() )

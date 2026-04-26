@@ -4,6 +4,5 @@ uniform camera
 {
   mat4 modelview;
   mat4 projection;
-  uint npasses;
 };
 

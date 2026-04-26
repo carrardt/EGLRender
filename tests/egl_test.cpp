@@ -63,8 +63,9 @@ int main(int argc, char *argv[])
     out float geomAngle;
     void main()
     {
-        gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);
-        geomAngle = aAngle;
+      mat4 mvp = projection * modelview;
+      gl_Position = mvp * vec4(aPos.x, aPos.y, aPos.z, 1.0);
+      geomAngle = aAngle;
     }
     )EOF" ,
     /* geometry shader */ R"EOF(
@@ -73,15 +74,16 @@ int main(int argc, char *argv[])
     layout (triangle_strip, max_vertices=3) out;
     in float geomAngle[];
     out vec4 aColor;
-    void main() {
-        vec4 aPos = gl_in[0].gl_Position;
-        aColor = vec4( clamp(aPos.x,0.1f,1.0f), clamp(aPos.y,0.1f,1.0f), clamp(aPos.x+aPos.y,0.1f,1.0f), 1.0f );
-        for(int i=0;i<3;i++)
-        {
-          gl_Position = gl_in[0].gl_Position + vec4( cos(geomAngle[0]+i*2*3.14159/3)*0.1 , sin(geomAngle[0]+i*2*3.14159/3)*0.1, 0.0 , 0.0 );
-          EmitVertex();
-        }
-        EndPrimitive();
+    void main()
+    {
+      vec4 aPos = gl_in[0].gl_Position;
+      aColor = vec4( clamp(aPos.x,0.1f,1.0f), clamp(aPos.y,0.1f,1.0f), clamp(aPos.x+aPos.y,0.1f,1.0f), 1.0f );
+      for(int i=0;i<3;i++)
+      {
+        gl_Position = gl_in[0].gl_Position + vec4( cos(geomAngle[0]+i*2*3.14159/3)*0.1 , sin(geomAngle[0]+i*2*3.14159/3)*0.1, 0.0 , 0.0 );
+        EmitVertex();
+      }
+      EndPrimitive();
     }
     )EOF" ,
     /* fragment shader */ R"EOF(
@@ -90,7 +92,7 @@ int main(int argc, char *argv[])
     out vec4 FragColor;
     void main()
     {
-        FragColor = aColor;
+      FragColor = aColor;
     }
     )EOF" ,
     { .m_enable_flags = { GL_PROGRAM_POINT_SIZE } }
@@ -99,17 +101,15 @@ int main(int argc, char *argv[])
   auto & shader = eglm.shader_program(shader_prog_id);
 
   std::cout << "Pipeline config :" << std::boolalpha << std::endl;
-  shader.m_pipeline_config.to_stream( std::cout );
-  //shader.use();
+  shader.m_pipeline_config.to_stream( std::cout );    
 
-  //const GLfloat mat[16] = { 1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1 };
-  //shader.uniform("camera").variable("npasses").set(3);
-  //shader.uniform("camera").variable("modelview").set(mat,16);
-    
+  auto camera_id = eglm.create_camera("pov");
+  auto & camera = eglm.camera(camera_id);
+  camera.lookAt( 0.0,2.0,-5.0 , 0.0,0.0,0.0 );
+  camera.attach_to_shader( eglm.shader_program_ptr(shader_prog_id), "camera", "modelview", "projection" );
+  camera.update_uniform();
+
   shader.use();
-
-  // equivalent to
-  // eglm.shader_program("rotating_triangle").use();
 
   const int n_points = 16;
   const auto buf_id = eglm.create_vertex_buffers("vertex_attribs",n_points , { GL_FLOAT,3, GL_FLOAT,1 } );

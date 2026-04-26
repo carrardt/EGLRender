@@ -20,13 +20,15 @@ under the License.
 #pragma once
 
 #include <EGLRender/egl_platform.h>
+#include <EGLRender/gl_shader.h>
 #include <array>
+#include <memory>
 
 namespace EGLRender
 {
   
-  struct GLCamera
-  {
+  struct UniformCameraMatrix
+  {    
     std::array<GLfloat,3> m_left  = { 1.0f , 0.0f , 0.0f  };
     std::array<GLfloat,3> m_up    = { 0.0f , 1.0f , 0.0f  };
     std::array<GLfloat,3> m_front = { 0.0f , 0.0f , 1.0f };
@@ -36,10 +38,17 @@ namespace EGLRender
     GLfloat m_aspect_ratio = 16.0f/9.0f; // = w/h
     GLfloat m_near = 1.0f;
     GLfloat m_far = 10.0f;
-    
+
+    std::shared_ptr<GLShaderProgram> m_shader = nullptr; // shader to write matrices to
+    GLint m_block_id = -1;
+    GLint m_modelview_variable_id = -1;
+    GLint m_projection_variable_id = -1;
+
     void lookAt( GLfloat eyeX, GLfloat eyeY, GLfloat eyeZ, GLfloat toX, GLfloat toY, GLfloat toZ);
     void tilt( GLfloat hAngle, GLfloat vAngle );
-    void use();
+    
+    void attach_to_shader( std::shared_ptr<GLShaderProgram> prog, std::string_view uniform_name, std::string_view mvmat_name, std::string_view projmat_name );
+    void update_uniform();
   };
 
 }

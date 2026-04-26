@@ -102,8 +102,8 @@ add_library(EGLRender SHARED
   src/egl_platform.cpp
   src/gl_shader.cpp
   src/gl_vbo.cpp
-  src/gl_camera.cpp
   src/gl_element_buffer.cpp
+  src/uniform_camera_matrix.cpp
   src/native_window_event_handler.cpp
   src/${EGLRENDER_PLATFORM_SRC}
   src/cu_graphics_gl.cpp)

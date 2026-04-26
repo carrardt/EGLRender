@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 */
 
-#include <EGLRender/gl_camera.h>
+#include <EGLRender/uniform_camera_matrix.h>
 #include <cmath>
 
 namespace EGLRender
@@ -55,7 +55,7 @@ namespace EGLRender
   static inline std::array<GLfloat,3> mul( const std::array<GLfloat,3> &u , const GLfloat s ) { return {u[0]*s,u[1]*s,u[2]*s}; }
   static inline auto normalize( const std::array<GLfloat,3> &u ) { return mul( u , 1.0 / norm(u) ); }
 
-  void GLCamera::lookAt( GLfloat eyeX, GLfloat eyeY, GLfloat eyeZ, GLfloat toX, GLfloat toY, GLfloat toZ)
+  void UniformCameraMatrix::lookAt( GLfloat eyeX, GLfloat eyeY, GLfloat eyeZ, GLfloat toX, GLfloat toY, GLfloat toZ)
   {
     m_location = { eyeX, eyeY, eyeZ };
     std::array<GLfloat,3> to = { toX, toY, toZ };
@@ -65,7 +65,7 @@ namespace EGLRender
     m_up = normalize( cross(m_front,m_left) );
   }
 
-  void GLCamera::tilt( GLfloat h, GLfloat v )
+  void UniformCameraMatrix::tilt( GLfloat h, GLfloat v )
   {
     const GLfloat DEG2RAD = acos(-1.0f) / 180;
     const GLfloat hcos = cos(h*DEG2RAD);
@@ -86,28 +86,69 @@ namespace EGLRender
     m_front = normalize(m_front);
   }
   
-  void GLCamera::use()
+  void UniformCameraMatrix::attach_to_shader(std::shared_ptr<GLShaderProgram> prog, std::string_view uniform_name, std::string_view mvmat_name, std::string_view projmat_name)
+  {
+    m_shader = prog;
+    if( m_shader == nullptr ) return;
+    m_block_id = prog->uniform_id(uniform_name);
+    if(m_block_id==-1)
+    {
+      std::cerr << "EGL Error: uniform block '"<<uniform_name<<"' not found in shader #"<<prog->m_shader_program <<std::endl;
+      std::abort();
+    }
+    m_modelview_variable_id = prog->uniform(m_block_id).variable_id(mvmat_name);
+    if(m_modelview_variable_id==-1)
+    {
+      std::cerr << "EGL Error: variable '"<<mvmat_name<<"' not found in uniform block '"<<uniform_name<<"'" <<std::endl;
+      std::abort();
+    }
+    m_projection_variable_id = prog->uniform(m_block_id).variable_id(projmat_name);
+    if(m_projection_variable_id==-1)
+    {
+      std::cerr << "EGL Error: variable '"<<projmat_name<<"' not found in uniform block '"<<uniform_name<<"'" <<std::endl;
+      std::abort();
+    }
+    std::cout << "atached to shader's block #"<<m_block_id<<", modelview is variable #"<<m_modelview_variable_id<<", projection variable is #"<<m_projection_variable_id<<std::endl;
+  }
+
+  static inline void transpose(GLfloat mat[16])
+  {
+    for(int j=0;j<4;j++) for(int i=0;i<4;i++) if(i!=j)
+    {
+      std::swap( mat[j*4+i] , mat[i*4+j] );
+    }
+  }
+
+  void UniformCameraMatrix::update_uniform()
   {
     constexpr double DEG2RAD = acos(-1.0f) / 180;
 
     // no, don't use glMatrix* functions, use unform binding, see reference below
     // https://perso.univ-lyon1.fr/jean-claude.iehl/Public/educ/M1IMAGE/html/group__uniform__buffers.html
 
-    glMatrixMode( GL_PROJECTION_MATRIX );
-    glLoadIdentity();
     double tangent = tan(m_fov_x/2 * DEG2RAD);   // tangent of half fovY
     double width = m_near * tangent;          // half height of near plane
-    double  height = width / m_aspect_ratio;      // half width of near plane
-    glFrustum(-width, width, -height, height, m_near, m_far);
+    double height = width / m_aspect_ratio;      // half width of near plane
+    GLfloat W = (2*m_near) / (2*width);
+    GLfloat H = (2*m_near) / (2*height);
+    GLfloat A = 0.0;
+    GLfloat B = 0.0;
+    GLfloat C = - (m_far+m_near) / (m_far-m_near);
+    GLfloat D = - (2*m_far*m_near) / (m_far-m_near);
 
-    glMatrixMode( GL_MODELVIEW_MATRIX );
-    glLoadIdentity();
-    GLfloat modelview[16] = { m_left[0], m_up[0], m_front[0], 0.0f
-                            , m_left[1], m_up[1], m_front[1], 0.0f
-                            , m_left[2], m_up[2], m_front[2], 0.0f
+    GLfloat projection[16] = { W, 0, A, 0
+                             , 0, H, B, 0
+                             , 0, 0, C, D
+                             , 0, 0,-1, 0 };
+    transpose( projection );
+    m_shader->uniform(m_block_id).variable(m_projection_variable_id).set( projection, 16 );
+
+    GLfloat modelview[16] = { m_left[0], m_up[0], m_front[0], -m_location[0]
+                            , m_left[1], m_up[1], m_front[1], -m_location[1]
+                            , m_left[2], m_up[2], m_front[2], -m_location[2]
                             , 0.0f     , 0.0f   , 0.0f      , 1.0f };
-    glMultMatrixf( modelview );
-    glTranslatef( -m_location[0], -m_location[1], -m_location[2] );
+    transpose( modelview );
+    m_shader->uniform(m_block_id).variable(m_modelview_variable_id).set( modelview, 16 );
   }
 
 }

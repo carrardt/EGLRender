@@ -25,12 +25,13 @@ under the License.
 #include <EGLRender/egl_surface.h>
 #include <EGLRender/gl_shader.h>
 #include <EGLRender/gl_vbo.h>
-#include <EGLRender/gl_camera.h>
+#include <EGLRender/uniform_camera_matrix.h>
 
 #include <map>
 #include <string>
 #include <string_view>
 #include <span>
+#include <memory>
 
 namespace EGLRender
 {
@@ -39,10 +40,10 @@ namespace EGLRender
   {
     EGLRenderer* m_egl = nullptr;
 
-    std::vector<EGLRenderSurface*> m_surfaces;
-    std::vector<GLShaderProgram*> m_programs;
-    std::vector<GLVertexBuffers*> m_buffers;
-    std::vector<GLCamera*> m_cameras;
+    std::vector< std::shared_ptr<EGLRenderSurface> > m_surfaces;
+    std::vector< std::shared_ptr<GLShaderProgram> > m_programs;
+    std::vector< std::shared_ptr<GLVertexBuffers> > m_buffers;
+    std::vector< std::shared_ptr<UniformCameraMatrix> > m_cameras;
 
     std::map<std::string,size_t> m_surf_names;
     std::map<std::string,size_t> m_prog_names;
@@ -61,19 +62,22 @@ namespace EGLRender
     EGLRenderer& renderer();
     EGLNativeDisplayType native_display();
 
+    int surface_id(int id);
     EGLRenderSurface& surface(int id);
     EGLRenderSurface& surface(std::string_view name);
 
+    int shader_program_id(std::string_view name);
     GLShaderProgram& shader_program(int id);
     GLShaderProgram& shader_program(std::string_view name);
+    std::shared_ptr<GLShaderProgram> shader_program_ptr(int id);
 
     int vertex_buffers_id(std::string_view name);
     GLVertexBuffers& vertex_buffers(int id);
     GLVertexBuffers& vertex_buffers(std::string_view name);
 
     int camera_id(std::string_view name);
-    GLCamera& camera(int id);
-    GLCamera& camera(std::string_view name);
+    UniformCameraMatrix& camera(int id);
+    UniformCameraMatrix& camera(std::string_view name);
   };
 
 }
