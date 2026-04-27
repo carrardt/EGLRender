@@ -16,75 +16,142 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
-
 #include <EGLRender/uniform_camera_matrix.h>
 #include <cmath>
-#include <format>
+#include <cstring>
 
 namespace EGLRender
 {
-
-  static inline std::array<GLfloat,3> cross(const std::array<GLfloat,3>& u, const std::array<GLfloat,3>& v)
-  {
-    return { u[1] * v[2] - u[2] * v[1]
-           , u[2] * v[0] - u[0] * v[2]
-           , u[0] * v[1] - u[1] * v[0] };
-  }
-
-  static inline auto dot(const std::array<GLfloat,3> &u, const std::array<GLfloat,3> &v)
-  {
-    return u[0]*v[0]+u[1]*v[1]+u[2]*v[2];
-  }
-
-  static inline std::array<GLfloat,3> add(const std::array<GLfloat,3>& u, const std::array<GLfloat,3>& v)
-  {
-    return { u[0]+v[0] , u[1]+v[1] , u[2]+v[2] };
-  }
-
-  static inline std::array<GLfloat,3> sub(const std::array<GLfloat,3>& u, const std::array<GLfloat,3>& v)
-  {
-    return { u[0]-v[0] , u[1]-v[1] , u[2]-v[2] };
-  }
-
-  static inline std::array<GLfloat,3> neg(const std::array<GLfloat,3>& u)
-  {
-    return { -u[0] , -u[1] , -u[2] };
-  }
   
-  static inline auto norm2( const std::array<GLfloat,3> &u ) { return dot(u,u); }
-  static inline auto norm( const std::array<GLfloat,3> &u ) { return sqrt(norm2(u)); }
-  static inline std::array<GLfloat,3> mul( const std::array<GLfloat,3> &u , const GLfloat s ) { return {u[0]*s,u[1]*s,u[2]*s}; }
-  static inline auto normalize( const std::array<GLfloat,3> &u ) { return mul( u , 1.0 / norm(u) ); }
-
-  void UniformCameraMatrix::lookAt( GLfloat eyeX, GLfloat eyeY, GLfloat eyeZ, GLfloat toX, GLfloat toY, GLfloat toZ)
+  static inline void matrix_identity(GLfloat m[16])
   {
-    m_location = { eyeX, eyeY, eyeZ };
-    std::array<GLfloat,3> to = { toX, toY, toZ };
-    m_front = normalize( sub(to,m_location) );
-    m_up = { 0.0f , 1.0f , 0.0f  };
-    m_left = normalize( cross(m_up,m_front) );
-    m_up = normalize( cross(m_front,m_left) );
+      m[0+4*0] = 1; m[0+4*1] = 0; m[0+4*2] = 0; m[0+4*3] = 0;
+      m[1+4*0] = 0; m[1+4*1] = 1; m[1+4*2] = 0; m[1+4*3] = 0;
+      m[2+4*0] = 0; m[2+4*1] = 0; m[2+4*2] = 1; m[2+4*3] = 0;
+      m[3+4*0] = 0; m[3+4*1] = 0; m[3+4*2] = 0; m[3+4*3] = 1;
   }
 
-  void UniformCameraMatrix::tilt( GLfloat h, GLfloat v )
+  static inline void matrix_translate(GLfloat m[16], GLfloat x, GLfloat y, GLfloat z)
   {
-    const GLfloat DEG2RAD = acos(-1.0f) / 180;
-    const GLfloat hcos = cos(h*DEG2RAD);
-    const GLfloat hsin = sin(h*DEG2RAD);
-    const GLfloat vcos = cos(v*DEG2RAD);
-    const GLfloat vsin = sin(v*DEG2RAD);
+      m[0+4*0] = 1; m[0+4*1] = 0; m[0+4*2] = 0; m[0+4*3] = x;
+      m[1+4*0] = 0; m[1+4*1] = 1; m[1+4*2] = 0; m[1+4*3] = y;
+      m[2+4*0] = 0; m[2+4*1] = 0; m[2+4*2] = 1; m[2+4*3] = z;
+      m[3+4*0] = 0; m[3+4*1] = 0; m[3+4*2] = 0; m[3+4*3] = 1;
+  }
 
-    auto nfront = add( mul(m_front,vcos) , mul(m_up,vsin) );
-    m_up = add( mul(m_up,vcos) , mul(m_front,-vsin) );
-    m_front = nfront;
-    
-    nfront = add( mul(m_front,hcos) , mul(m_left,hsin) );
-    m_left = add( mul(m_left,hcos) , mul(m_front,-hsin) );
-    m_front = nfront;
-    
-    m_left = normalize(m_left);
-    m_up = normalize(m_up);
-    m_front = normalize(m_front);
+  static inline void matrix_perspective(GLfloat out[16], GLfloat fovy, GLfloat aspect, GLfloat zNear, GLfloat zFar)
+  {
+      GLfloat m[4][4];
+      double sine, cotangent, deltaZ;
+      double radians = fovy / 2 * M_PI / 180;
+
+      deltaZ = zFar - zNear;
+      sine = sin(radians);
+      if ((deltaZ == 0) || (sine == 0) || (aspect == 0)) {
+        matrix_identity(&m[0][0]);
+        return;
+      }
+      cotangent = cos(radians) / sine;
+
+      matrix_identity(&m[0][0]);
+      m[0][0] = cotangent / aspect;
+      m[1][1] = cotangent;
+      m[2][2] = -(zFar + zNear) / deltaZ;
+      m[2][3] = -1;
+      m[3][2] = -2 * zNear * zFar / deltaZ;
+      m[3][3] = 0;
+      std::memcpy( out, &m[0][0], 16*sizeof(GLfloat) );
+  }
+
+  static inline void mult_matrix(const GLfloat a[16], const GLfloat b[16], GLfloat r[16])
+  {
+    int i, j;
+    for (i = 0; i < 4; i++) {
+      for (j = 0; j < 4; j++) {
+        r[i*4+j] = 
+        a[i*4+0]*b[0*4+j] +
+        a[i*4+1]*b[1*4+j] +
+        a[i*4+2]*b[2*4+j] +
+        a[i*4+3]*b[3*4+j];
+      }
+    }
+  }
+
+  static inline void normalize(GLfloat v[3])
+  {
+      float r;
+
+      r = sqrt( v[0]*v[0] + v[1]*v[1] + v[2]*v[2] );
+      if (r == 0.0) return;
+
+      v[0] /= r;
+      v[1] /= r;
+      v[2] /= r;
+  }
+
+  static inline void cross(const GLfloat v1[3], const GLfloat v2[3], GLfloat result[3])
+  {
+      result[0] = v1[1]*v2[2] - v1[2]*v2[1];
+      result[1] = v1[2]*v2[0] - v1[0]*v2[2];
+      result[2] = v1[0]*v2[1] - v1[1]*v2[0];
+  }
+
+  static inline void 
+  matrix_look_at( GLfloat out[16]
+                , GLfloat eyex, GLfloat eyey, GLfloat eyez
+                , GLfloat centerx, GLfloat centery, GLfloat centerz
+                , GLfloat upx, GLfloat upy, GLfloat upz)
+  {
+      float forward[3], side[3], up[3];
+      GLfloat m[4][4];
+
+      forward[0] = centerx - eyex;
+      forward[1] = centery - eyey;
+      forward[2] = centerz - eyez;
+
+      up[0] = upx;
+      up[1] = upy;
+      up[2] = upz;
+
+      normalize(forward);
+
+      /* Side = forward x up */
+      cross(forward, up, side);
+      normalize(side);
+
+      /* Recompute up as: up = side x forward */
+      cross(side, forward, up);
+
+      matrix_identity(&m[0][0]);
+      m[0][0] = side[0];
+      m[1][0] = side[1];
+      m[2][0] = side[2];
+
+      m[0][1] = up[0];
+      m[1][1] = up[1];
+      m[2][1] = up[2];
+
+      m[0][2] = -forward[0];
+      m[1][2] = -forward[1];
+      m[2][2] = -forward[2];
+      
+      GLfloat tmat[4][4];
+      matrix_translate(&tmat[0][0] , -eyex, -eyey, -eyez );
+      mult_matrix( &m[0][0] , &tmat[0][0] , out );
+  }
+
+  void UniformCameraMatrix::perspective(float fov, float ratio, float near, float far)
+  {
+    m_fov = fov;
+    m_aspect_ratio = ratio;
+    m_near = near;
+    m_far = far;
+  }
+
+  void UniformCameraMatrix::look_at(const vec3& eye, const vec3& center)
+  {
+    m_eye = eye;
+    m_center = center;
   }
   
   void UniformCameraMatrix::attach_to_shader(std::shared_ptr<GLShaderProgram> prog, std::string_view uniform_name, std::string_view mvmat_name, std::string_view projmat_name)
@@ -112,49 +179,17 @@ namespace EGLRender
     std::cout << "atached to shader's block #"<<m_block_id<<", modelview is variable #"<<m_modelview_variable_id<<", projection variable is #"<<m_projection_variable_id<<std::endl;
   }
 
-  static inline void transpose(GLfloat mat[16])
-  {
-    for(int j=0;j<4;j++) for(int i=0;i<4;i++) if(i!=j)
-    {
-      std::swap( mat[j*4+i] , mat[i*4+j] );
-    }
-  }
-
   void UniformCameraMatrix::update_uniform()
   {
     constexpr double DEG2RAD = acos(-1.0f) / 180;
+    GLfloat mat[16];
 
-    // no, don't use glMatrix* functions, use unform binding, see reference below
-    // https://perso.univ-lyon1.fr/jean-claude.iehl/Public/educ/M1IMAGE/html/group__uniform__buffers.html
+    if( m_fov > 0.0 ) matrix_perspective( mat, m_fov, m_aspect_ratio, m_near, m_far );
+    else matrix_identity( mat );
+    m_shader->uniform(m_block_id).variable(m_projection_variable_id).set( mat, 16 );
 
-    double tangent = tan(m_fov_x/2 * DEG2RAD);   // tangent of half fovY
-    double width = m_near * tangent;          // half height of near plane
-    double height = width / m_aspect_ratio;      // half width of near plane
-    GLfloat W = (2*m_near) / (2*width);
-    GLfloat H = (2*m_near) / (2*height);
-    GLfloat A = 0.0;
-    GLfloat B = 0.0;
-    GLfloat C = - (m_far+m_near) / (m_far-m_near);
-    GLfloat D = - (2*m_far*m_near) / (m_far-m_near);
-
-    GLfloat projection[16] = { 1, 0, 0, 0
-                             , 0, 1, 0, 0
-                             , 0, 0, 1, 0
-                             , 0, 0, 0, 1 };
-    transpose( projection );
-    for(int i=0;i<16;i++) std::cout << std::format("{}{:.3e}",(i%4==0)?'\n':' ',projection[i]);
-    std::cout<<std::endl;
-    m_shader->uniform(m_block_id).variable(m_projection_variable_id).set( projection, 16 );
-
-    GLfloat modelview[16] = { m_left[0], m_up[0], m_front[0], -m_location[0]
-                            , m_left[1], m_up[1], m_front[1], -m_location[1]
-                            , m_left[2], m_up[2], m_front[2], -m_location[2]
-                            , 0.0f     , 0.0f   , 0.0f      , 1.0f };
-    transpose( modelview );
-    for(int i=0;i<16;i++) std::cout << std::format("{}{:.3e}",(i%4==0)?'\n':' ',modelview[i]);
-    std::cout<<std::endl;
-
-    m_shader->uniform(m_block_id).variable(m_modelview_variable_id).set( modelview, 16 );
+    matrix_look_at(mat, m_eye[0],m_eye[1],m_eye[2], m_center[0],m_center[1],m_center[2], m_up[0],m_up[1],m_up[2]);
+    m_shader->uniform(m_block_id).variable(m_modelview_variable_id).set( mat, 16 );
   }
 
 }

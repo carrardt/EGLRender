@@ -25,11 +25,17 @@ under the License.
 #include <EGL/eglext.h>
 #include <GL/gl.h>
 
-#include <string_view>
 #include <EGLRender/native_window_event_handler.h>
+
+#include <string_view>
+#include <array>
+
 
 namespace EGLRender
 {
+  using vec3 = std::array<GLfloat,3>;
+  using vec4 = std::array<GLfloat,4>;
+  using mat4 = std::array<GLfloat,16>;
 
   EGLNativeDisplayType platform_get_native_display();
   EGLNativeWindowType platform_get_native_window(EGLNativeDisplayType native_display, int w, int h, bool fullscreen, std::string_view name = "EGL");

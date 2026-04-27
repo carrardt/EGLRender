@@ -105,7 +105,8 @@ int main(int argc, char *argv[])
 
   auto camera_id = eglm.create_camera("pov");
   auto & camera = eglm.camera(camera_id);
-  camera.lookAt( 0.0,2.0,-5.0 , 0.0,0.0,0.0 );
+  camera.look_at( {0,0,-5} , {0,0,0} );
+  camera.perspective(0,0,0,0); // disable projection
   camera.attach_to_shader( eglm.shader_program_ptr(shader_prog_id), "camera", "modelview", "projection" );
   camera.update_uniform();
 
@@ -166,15 +167,58 @@ int main(int argc, char *argv[])
   }
   else
   {
-    bool should_exit = false;
+    struct
+    {
+      GLfloat cam_dist = 5.0f;
+      GLfloat angle_h = 0.0f;
+      GLfloat angle_v = 0.0f;
+      int mouse_last_x = -1;
+      int mouse_last_y = -1;
+      bool should_exit = false;
+      bool mouse_drag = false;
+    } uistate;
+
     auto & ren_surf = eglm.surface("main_window");
-    ren_surf.m_event_handler.on_button_press = [&should_exit,f=ren_surf.m_event_handler.on_button_press](int state, int b, int x,int y) { f(state,b,x,y); if(b==3) should_exit=true; };
+    ren_surf.m_event_handler.on_button_press = [&uistate,f=ren_surf.m_event_handler.on_button_press](int state, int b, int x,int y)
+      {
+        f(state,b,x,y);
+        if(b==3) uistate.should_exit=true;
+        if(b==1) uistate.mouse_drag=true;
+      };
+    ren_surf.m_event_handler.on_button_release = [&uistate,f=ren_surf.m_event_handler.on_button_release](int state, int b, int x,int y)
+      {
+        f(state,b,x,y);
+        if(b==1) uistate.mouse_drag=false;
+      };
+    ren_surf.m_event_handler.on_mouse_move = [&uistate,&camera,f=ren_surf.m_event_handler.on_mouse_move](int x,int y)
+      {
+        f(x,y);
+        if( uistate.mouse_drag )
+        {
+          int dx = x - uistate.mouse_last_x;
+          int dy = y - uistate.mouse_last_y;
+          const auto d = uistate.cam_dist;
+          auto &h = uistate.angle_h;
+          auto &v = uistate.angle_v;
+          h += dx * 0.01f;
+          v += dy * 0.01f;
+          GLfloat eyeZ = - d * cos(v);
+          GLfloat eyeY = d * sin(v);
+          GLfloat eyeX = eyeZ * sin(h);
+          eyeZ = eyeZ * cos(v);
+          camera.look_at( {eyeX,eyeY,eyeZ} , {0,0,0} );
+        }
+        uistate.mouse_last_x = x;
+        uistate.mouse_last_y = y;
+      };
 
     int i=0;
-    while( ! should_exit )
+    while( ! uistate.should_exit )
     {
       ren_surf.process_events();
       ren_surf.make_current();
+
+      camera.update_uniform();
 
       GLfloat phi_base = i*0.003f;
       auto & glvbos = eglm.vertex_buffers(buf_id);

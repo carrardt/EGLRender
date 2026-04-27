@@ -21,20 +21,19 @@ under the License.
 
 #include <EGLRender/egl_platform.h>
 #include <EGLRender/gl_shader.h>
-#include <array>
 #include <memory>
+#include <span>
 
 namespace EGLRender
 {
   
   struct UniformCameraMatrix
   {    
-    std::array<GLfloat,3> m_left  = { 1.0f , 0.0f , 0.0f  };
-    std::array<GLfloat,3> m_up    = { 0.0f , 1.0f , 0.0f  };
-    std::array<GLfloat,3> m_front = { 0.0f , 0.0f , 1.0f };
-    std::array<GLfloat,3> m_location = { 0.0f , 0.0f , -5.0f };
+    vec3 m_eye = { 0.0f , 0.0f , -15.0f  };
+    vec3 m_center = { 0.0f , 0.0f , 0.0f  };
+    vec3 m_up = { 0.0f , 1.0f , 0.0f };
 
-    GLfloat m_fov_x = 60.0f; // fov angle in degrees
+    GLfloat m_fov = 60.0f; // fov angle in degrees
     GLfloat m_aspect_ratio = 16.0f/9.0f; // = w/h
     GLfloat m_near = 0.1f;
     GLfloat m_far = 100.0f;
@@ -44,8 +43,8 @@ namespace EGLRender
     GLint m_modelview_variable_id = -1;
     GLint m_projection_variable_id = -1;
 
-    void lookAt( GLfloat eyeX, GLfloat eyeY, GLfloat eyeZ, GLfloat toX, GLfloat toY, GLfloat toZ);
-    void tilt( GLfloat hAngle, GLfloat vAngle );
+    void perspective(float fov, float ratio, float near, float far);
+    void look_at( const vec3& eye, const vec3& center );    
     
     void attach_to_shader( std::shared_ptr<GLShaderProgram> prog, std::string_view uniform_name, std::string_view mvmat_name, std::string_view projmat_name );
     void update_uniform();

@@ -35,7 +35,7 @@ project(EGLRender VERSION 1.0.0 LANGUAGES CXX)
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
-find_package(OpenGL COMPONENTS EGL OpenGL)
+find_package(OpenGL)
 set(EGLRENDER_LIBS OpenGL::EGL OpenGL::OpenGL)
 
 set(EGLRENDER_NATIVE_DISPLAY "X11" CACHE STRING "Native display for EGL on screen rendering")
