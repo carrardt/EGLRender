@@ -36,8 +36,8 @@ namespace EGLRender
 
     GLfloat m_fov_x = 60.0f; // fov angle in degrees
     GLfloat m_aspect_ratio = 16.0f/9.0f; // = w/h
-    GLfloat m_near = 1.0f;
-    GLfloat m_far = 10.0f;
+    GLfloat m_near = 0.1f;
+    GLfloat m_far = 100.0f;
 
     std::shared_ptr<GLShaderProgram> m_shader = nullptr; // shader to write matrices to
     GLint m_block_id = -1;

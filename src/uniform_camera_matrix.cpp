@@ -19,6 +19,7 @@ under the License.
 
 #include <EGLRender/uniform_camera_matrix.h>
 #include <cmath>
+#include <format>
 
 namespace EGLRender
 {
@@ -136,11 +137,13 @@ namespace EGLRender
     GLfloat C = - (m_far+m_near) / (m_far-m_near);
     GLfloat D = - (2*m_far*m_near) / (m_far-m_near);
 
-    GLfloat projection[16] = { W, 0, A, 0
-                             , 0, H, B, 0
-                             , 0, 0, C, D
-                             , 0, 0,-1, 0 };
+    GLfloat projection[16] = { 1, 0, 0, 0
+                             , 0, 1, 0, 0
+                             , 0, 0, 1, 0
+                             , 0, 0, 0, 1 };
     transpose( projection );
+    for(int i=0;i<16;i++) std::cout << std::format("{}{:.3e}",(i%4==0)?'\n':' ',projection[i]);
+    std::cout<<std::endl;
     m_shader->uniform(m_block_id).variable(m_projection_variable_id).set( projection, 16 );
 
     GLfloat modelview[16] = { m_left[0], m_up[0], m_front[0], -m_location[0]
@@ -148,6 +151,9 @@ namespace EGLRender
                             , m_left[2], m_up[2], m_front[2], -m_location[2]
                             , 0.0f     , 0.0f   , 0.0f      , 1.0f };
     transpose( modelview );
+    for(int i=0;i<16;i++) std::cout << std::format("{}{:.3e}",(i%4==0)?'\n':' ',modelview[i]);
+    std::cout<<std::endl;
+
     m_shader->uniform(m_block_id).variable(m_modelview_variable_id).set( modelview, 16 );
   }
 
