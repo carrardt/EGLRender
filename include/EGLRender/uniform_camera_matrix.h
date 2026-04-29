@@ -49,7 +49,9 @@ namespace EGLRender
     GLint m_projection_variable_id = -1;
 
     void perspective(float fov, float ratio, float near, float far);
-    void look_at( const vec3& eye, const vec3& center );    
+    void look_at( const vec3& eye, const vec3& center );
+//    void head_tilt( GLfloat horiz_angle, GLfloat vert_angle );
+//    void move_forward( GLfloat dist );
     
     void attach_to_shader( std::shared_ptr<GLShaderProgram> prog, std::string_view uniform_name, std::string_view mvmat_name, std::string_view projmat_name );
     void update_uniform();
