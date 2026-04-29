@@ -23,6 +23,8 @@ under the License.
 #include <EGLRender/gl_shader.h>
 #include <memory>
 #include <span>
+#include <limits>
+#include <cmath>
 
 namespace EGLRender
 {
@@ -38,6 +40,9 @@ namespace EGLRender
     GLfloat m_near = 0.1f;
     GLfloat m_far = 100.0f;
 
+    GLfloat m_modelview_matrix[16] = { std::numeric_limits<GLfloat>::quiet_NaN(), };
+    GLfloat m_projection_matrix[16] = { std::numeric_limits<GLfloat>::quiet_NaN(), };
+
     std::shared_ptr<GLShaderProgram> m_shader = nullptr; // shader to write matrices to
     GLint m_block_id = -1;
     GLint m_modelview_variable_id = -1;
@@ -48,6 +53,10 @@ namespace EGLRender
     
     void attach_to_shader( std::shared_ptr<GLShaderProgram> prog, std::string_view uniform_name, std::string_view mvmat_name, std::string_view projmat_name );
     void update_uniform();
+
+    void update_modelview();
+    void update_projection();
+    void transform(const GLfloat v[4], GLfloat out[4]);
   };
 
 }

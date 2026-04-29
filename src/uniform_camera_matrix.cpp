@@ -77,6 +77,20 @@ namespace EGLRender
     }
   }
 
+  static inline void mult_matrix_vec(const GLfloat matrix[16], const GLfloat in[4], GLfloat out[4])
+  {
+    int i;
+    for (i=0; i<4; i++)
+    {
+      out[i] = 
+      in[0] * matrix[0*4+i] +
+      in[1] * matrix[1*4+i] +
+      in[2] * matrix[2*4+i] +
+      in[3] * matrix[3*4+i];
+    }
+  }
+
+
   static inline void normalize(GLfloat v[3])
   {
       float r;
@@ -137,7 +151,7 @@ namespace EGLRender
       
       GLfloat tmat[4][4];
       matrix_translate(&tmat[0][0] , -eyex, -eyey, -eyez );
-      mult_matrix( &m[0][0] , &tmat[0][0] , out );
+      mult_matrix( &tmat[0][0], &m[0][0] , out );
   }
 
   void UniformCameraMatrix::perspective(float fov, float ratio, float near, float far)
@@ -146,12 +160,25 @@ namespace EGLRender
     m_aspect_ratio = ratio;
     m_near = near;
     m_far = far;
+    update_projection();
+  }
+
+  void UniformCameraMatrix::update_projection()
+  {
+    if( m_fov > 0.0 ) matrix_perspective( m_projection_matrix, m_fov, m_aspect_ratio, m_near, m_far );
+    else matrix_identity( m_projection_matrix );
   }
 
   void UniformCameraMatrix::look_at(const vec3& eye, const vec3& center)
   {
     m_eye = eye;
     m_center = center;
+    update_modelview();
+  }
+  
+  void UniformCameraMatrix::update_modelview()
+  {
+    matrix_look_at(m_modelview_matrix, m_eye[0],m_eye[1],m_eye[2], m_center[0],m_center[1],m_center[2], m_up[0],m_up[1],m_up[2]);
   }
   
   void UniformCameraMatrix::attach_to_shader(std::shared_ptr<GLShaderProgram> prog, std::string_view uniform_name, std::string_view mvmat_name, std::string_view projmat_name)
@@ -184,12 +211,20 @@ namespace EGLRender
     constexpr double DEG2RAD = acos(-1.0f) / 180;
     GLfloat mat[16];
 
-    if( m_fov > 0.0 ) matrix_perspective( mat, m_fov, m_aspect_ratio, m_near, m_far );
-    else matrix_identity( mat );
-    m_shader->uniform(m_block_id).variable(m_projection_variable_id).set( mat, 16 );
+    if( std::isnan(m_modelview_matrix[0]) ) update_modelview();
+    if( std::isnan(m_projection_matrix[0]) ) update_projection();
 
-    matrix_look_at(mat, m_eye[0],m_eye[1],m_eye[2], m_center[0],m_center[1],m_center[2], m_up[0],m_up[1],m_up[2]);
-    m_shader->uniform(m_block_id).variable(m_modelview_variable_id).set( mat, 16 );
+    m_shader->uniform(m_block_id).variable(m_modelview_variable_id).set( m_modelview_matrix, 16 );
+    m_shader->uniform(m_block_id).variable(m_projection_variable_id).set( m_projection_matrix, 16 );
   }
 
+  void UniformCameraMatrix::transform(const GLfloat in[4], GLfloat out[4])
+  {
+    if( std::isnan(m_modelview_matrix[0]) ) update_modelview();
+    if( std::isnan(m_projection_matrix[0]) ) update_projection();
+    
+    GLfloat mout[4] = {0,0,0,0};
+    mult_matrix_vec( m_modelview_matrix, in, mout );
+    mult_matrix_vec( m_projection_matrix, mout, out );
+  }
 }

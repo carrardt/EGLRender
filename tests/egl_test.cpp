@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
     void main()
     {
       mat4 mvp = projection * modelview;
-      gl_Position = mvp * vec4(aPos.x, aPos.y, aPos.z, 1.0);
+      gl_Position = mvp * aPos;
       geomAngle = aAngle;
     }
     )EOF" ,
@@ -80,7 +80,7 @@ int main(int argc, char *argv[])
       aColor = vec4( clamp(aPos.x,0.1f,1.0f), clamp(aPos.y,0.1f,1.0f), clamp(aPos.x+aPos.y,0.1f,1.0f), 1.0f );
       for(int i=0;i<3;i++)
       {
-        gl_Position = gl_in[0].gl_Position + vec4( cos(geomAngle[0]+i*2*3.14159/3)*0.1 , sin(geomAngle[0]+i*2*3.14159/3)*0.1, 0.0 , 0.0 );
+        gl_Position = gl_in[0].gl_Position + vec4( cos(geomAngle[0]+i*2*3.14159/3)*0.02 , sin(geomAngle[0]+i*2*3.14159/3)*0.02, 0.0 , 0.0 );
         EmitVertex();
       }
       EndPrimitive();
@@ -105,15 +105,15 @@ int main(int argc, char *argv[])
 
   auto camera_id = eglm.create_camera("pov");
   auto & camera = eglm.camera(camera_id);
-  camera.look_at( {0,0,-5} , {0,0,0} );
-  camera.perspective(0,0,0,0); // disable projection
+  camera.look_at( {0,5,10} , {0,0,0} );
+  camera.perspective(60,800.0f/600.0f,0.1f,100.0f); // disable projection
   camera.attach_to_shader( eglm.shader_program_ptr(shader_prog_id), "camera", "modelview", "projection" );
   camera.update_uniform();
 
   shader.use();
 
-  const int n_points = 16;
-  const auto buf_id = eglm.create_vertex_buffers("vertex_attribs",n_points , { GL_FLOAT,3, GL_FLOAT,1 } );
+  const int n_points = 64;
+  const auto buf_id = eglm.create_vertex_buffers("vertex_attribs",n_points , { GL_FLOAT,4, GL_FLOAT,1 } );
 
   glColorMask (GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
   glDepthMask (GL_TRUE);
@@ -136,9 +136,13 @@ int main(int argc, char *argv[])
     for(int j=0;j<n_points;j++)
     {
       GLfloat phi = phi_base + (2*M_PI*j/n_points);
-      v[j*3+0]=std::cos(phi)*0.5f;
-      v[j*3+1]=std::sin(phi)*0.5f;
-      v[j*3+2]=0.0f;
+      GLfloat in[4] = { std::cos(phi)*0.5f
+                      , std::sin(phi)*0.5f
+                      , std::cos(phi*1.5f)*std::sin(phi*2.5f)*0.5f
+                      , 1.0f };
+      GLfloat out[4] = {0,0,0,0};
+      camera.transform(in,out);
+      for(int k=0;k<4;k++) v[j*4+k]=out[k];
       a[j] = -phi_base*10.0f;
     }
     glvbos.host_unmap(0); v=nullptr;
@@ -174,35 +178,54 @@ int main(int argc, char *argv[])
       GLfloat angle_v = 0.0f;
       int mouse_last_x = -1;
       int mouse_last_y = -1;
-      bool should_exit = false;
-      bool mouse_drag = false;
+      int should_exit = false;
+      int left_drag = false;
+      int right_drag = false;
     } uistate;
 
     auto & ren_surf = eglm.surface("main_window");
     ren_surf.m_event_handler.on_button_press = [&uistate,f=ren_surf.m_event_handler.on_button_press](int state, int b, int x,int y)
       {
         f(state,b,x,y);
-        if(b==3) uistate.should_exit=true;
-        if(b==1) uistate.mouse_drag=true;
+        switch( b )
+        {
+          case 1 : uistate.left_drag=true; break;
+          case 2 : uistate.right_drag=true; break;
+          case 3 : uistate.should_exit=true; break;
+        }
       };
     ren_surf.m_event_handler.on_button_release = [&uistate,f=ren_surf.m_event_handler.on_button_release](int state, int b, int x,int y)
       {
         f(state,b,x,y);
-        if(b==1) uistate.mouse_drag=false;
+        switch( b )
+        {
+          case 1 : uistate.left_drag=false; break;
+          case 2 : uistate.right_drag=false; break;
+        }
       };
     ren_surf.m_event_handler.on_mouse_move = [&uistate,&camera,f=ren_surf.m_event_handler.on_mouse_move](int x,int y)
       {
         f(x,y);
-        if( uistate.mouse_drag )
+        int dx = x - uistate.mouse_last_x;
+        int dy = y - uistate.mouse_last_y;
+        bool update_cam = false;
+        if( uistate.left_drag )
         {
-          int dx = x - uistate.mouse_last_x;
-          int dy = y - uistate.mouse_last_y;
+          uistate.angle_h += dx * 0.01f;
+          uistate.angle_v += dy * 0.01f;
+          update_cam = true;        
+        }
+        else if( uistate.right_drag )
+        {
+          uistate.cam_dist += dy * 0.01f;
+          update_cam = true;
+        }
+        if(update_cam)
+        {
           const auto d = uistate.cam_dist;
-          auto &h = uistate.angle_h;
-          auto &v = uistate.angle_v;
-          h += dx * 0.01f;
-          v += dy * 0.01f;
-          GLfloat eyeZ = - d * cos(v);
+          const auto h = uistate.angle_h;
+          const auto v = uistate.angle_v;
+          GLfloat eyeZ = d * cos(v);
           GLfloat eyeY = d * sin(v);
           GLfloat eyeX = eyeZ * sin(h);
           eyeZ = eyeZ * cos(v);
@@ -213,6 +236,7 @@ int main(int argc, char *argv[])
       };
 
     int i=0;
+    bool first = true;
     while( ! uistate.should_exit )
     {
       ren_surf.process_events();
@@ -229,11 +253,16 @@ int main(int argc, char *argv[])
       for(int j=0;j<n_points;j++)
       {
         GLfloat phi = phi_base + (2*M_PI*j/n_points);
-        v[j*3+0]=std::cos(phi)*0.5f;
-        v[j*3+1]=std::sin(phi)*0.5f;
-        v[j*3+2]=0.0f;
+        GLfloat in[4] = { std::cos(phi)*0.5f
+                        , std::sin(phi)*0.5f
+                        , std::cos(phi*1.5f)*std::sin(phi*2.5f)*0.5f
+                        , 1.0f };
+        GLfloat out[4] = {0,0,0,0};
+        //camera.transform(in,out);
+        for(int k=0;k<4;k++) v[j*4+k]=in[k];
         a[j] = -phi_base*10.0f;
       }
+      first=false;
       glvbos.host_unmap(0); v=nullptr;
       glvbos.host_unmap(1); a=nullptr;
 
