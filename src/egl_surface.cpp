@@ -107,7 +107,10 @@ namespace EGLRender
 
   void EGLRenderSurface::process_events()
   {
-    platform_native_window_process_events(m_egl->native_display(), native_window(), m_event_handler);
+    if( m_surface_type != EGLRenderSurfaceClass::PBUFFER )
+    {
+      platform_native_window_process_events(m_egl->native_display(), native_window(), m_event_handler);
+    }
   }
 
   void EGLRenderSurface::make_current()

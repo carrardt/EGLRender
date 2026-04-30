@@ -89,19 +89,19 @@ namespace EGLRender
         switch (xev.type)
         {
           case MotionNotify:
-            cb.on_mouse_move( xev.xbutton.x, xev.xbutton.y );
+            if(cb.on_mouse_move) cb.on_mouse_move( xev.xbutton.x, xev.xbutton.y );
             break;
           case KeyRelease:
-            cb.on_key_release( XLookupKeysym (&xev.xkey, 0) );
+            if(cb.on_key_release) cb.on_key_release( XLookupKeysym (&xev.xkey, 0) );
             break;
           case KeyPress:
-            cb.on_key_press( XLookupKeysym (&xev.xkey, 0) );
+            if(cb.on_key_press) cb.on_key_press( XLookupKeysym (&xev.xkey, 0) );
             break;
           case ButtonPress:
-            cb.on_button_press( xev.xbutton.state, xev.xbutton.button, xev.xbutton.x, xev.xbutton.y );
+            if(cb.on_button_press) cb.on_button_press( xev.xbutton.state, xev.xbutton.button, xev.xbutton.x, xev.xbutton.y );
             break;
           case ButtonRelease:
-            cb.on_button_release( xev.xbutton.state, xev.xbutton.button, xev.xbutton.x, xev.xbutton.y );
+            if(cb.on_button_release) cb.on_button_release( xev.xbutton.state, xev.xbutton.button, xev.xbutton.x, xev.xbutton.y );
             break;
         }
       }

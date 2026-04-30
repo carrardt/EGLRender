@@ -26,13 +26,12 @@ namespace EGLRender
 
   struct NativeWindowEventHandler
   {
-    std::function<void(int,int)> on_mouse_move = [](int,int){};
-    std::function<void(int)> on_key_release = [](int){};
-    std::function<void(int)> on_key_press = [](int){};
-    std::function<void(int,int,int,int)> on_button_press = [](int,int,int,int){};
-    std::function<void(int,int,int,int)> on_button_release = [](int,int,int,int){};
+    std::function<void(int,int)> on_mouse_move; // = [](int,int){};
+    std::function<void(int)> on_key_release; // = [](int){};
+    std::function<void(int)> on_key_press; // = [](int){};
+    std::function<void(int,int,int,int)> on_button_press; // = [](int,int,int,int){};
+    std::function<void(int,int,int,int)> on_button_release; // = [](int,int,int,int){};
   };
 
   NativeWindowEventHandler native_window_event_printer();
-
 }

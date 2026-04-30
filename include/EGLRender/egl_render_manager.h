@@ -50,8 +50,6 @@ namespace EGLRender
     std::map<std::string,size_t> m_buf_names;
     std::map<std::string,size_t> m_camera_names;
 
-    bool m_user_exit = false;
-
     void init_platform(bool use_native_dpy=true, bool gles_mode=false);
     int create_surface( std::string_view name, EGLRenderSurfaceClass surf_type=EGLRenderSurfaceClass::PBUFFER, EGLint w=1920, EGLint h=1080, EGLint colbits=8, EGLint alphabits=8, EGLint zbits=24 , EGLint stencilbits=8);
     int create_shader_program( std::string_view name, std::string_view vs, std::string_view gs, std::string_view fs, const GLPipelineConfig& pc = GLPipelineConfig{} );

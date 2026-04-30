@@ -25,42 +25,40 @@ namespace EGLRender
   
   static inline void matrix_identity(GLfloat m[16])
   {
-      m[0+4*0] = 1; m[0+4*1] = 0; m[0+4*2] = 0; m[0+4*3] = 0;
-      m[1+4*0] = 0; m[1+4*1] = 1; m[1+4*2] = 0; m[1+4*3] = 0;
-      m[2+4*0] = 0; m[2+4*1] = 0; m[2+4*2] = 1; m[2+4*3] = 0;
-      m[3+4*0] = 0; m[3+4*1] = 0; m[3+4*2] = 0; m[3+4*3] = 1;
+    m[0+4*0] = 1; m[0+4*1] = 0; m[0+4*2] = 0; m[0+4*3] = 0;
+    m[1+4*0] = 0; m[1+4*1] = 1; m[1+4*2] = 0; m[1+4*3] = 0;
+    m[2+4*0] = 0; m[2+4*1] = 0; m[2+4*2] = 1; m[2+4*3] = 0;
+    m[3+4*0] = 0; m[3+4*1] = 0; m[3+4*2] = 0; m[3+4*3] = 1;
   }
 
   static inline void matrix_translate(GLfloat m[16], GLfloat x, GLfloat y, GLfloat z)
   {
-      m[0+4*0] = 1; m[0+4*1] = 0; m[0+4*2] = 0; m[0+4*3] = x;
-      m[1+4*0] = 0; m[1+4*1] = 1; m[1+4*2] = 0; m[1+4*3] = y;
-      m[2+4*0] = 0; m[2+4*1] = 0; m[2+4*2] = 1; m[2+4*3] = z;
-      m[3+4*0] = 0; m[3+4*1] = 0; m[3+4*2] = 0; m[3+4*3] = 1;
+    m[0+4*0] = 1; m[0+4*1] = 0; m[0+4*2] = 0; m[0+4*3] = x;
+    m[1+4*0] = 0; m[1+4*1] = 1; m[1+4*2] = 0; m[1+4*3] = y;
+    m[2+4*0] = 0; m[2+4*1] = 0; m[2+4*2] = 1; m[2+4*3] = z;
+    m[3+4*0] = 0; m[3+4*1] = 0; m[3+4*2] = 0; m[3+4*3] = 1;
   }
 
   static inline void matrix_perspective(GLfloat out[16], GLfloat fovy, GLfloat aspect, GLfloat zNear, GLfloat zFar)
   {
-      GLfloat m[4][4];
-      double sine, cotangent, deltaZ;
-      double radians = fovy / 2 * M_PI / 180;
-
-      deltaZ = zFar - zNear;
-      sine = sin(radians);
-      if ((deltaZ == 0) || (sine == 0) || (aspect == 0)) {
-        matrix_identity(&m[0][0]);
-        return;
-      }
-      cotangent = cos(radians) / sine;
-
+    GLfloat m[4][4];
+    double sine, cotangent, deltaZ;
+    double radians = fovy / 2 * M_PI / 180;
+    deltaZ = zFar - zNear;
+    sine = sin(radians);
+    if ((deltaZ == 0) || (sine == 0) || (aspect == 0)) {
       matrix_identity(&m[0][0]);
-      m[0][0] = cotangent / aspect;
-      m[1][1] = cotangent;
-      m[2][2] = -(zFar + zNear) / deltaZ;
-      m[2][3] = -1;
-      m[3][2] = -2 * zNear * zFar / deltaZ;
-      m[3][3] = 0;
-      std::memcpy( out, &m[0][0], 16*sizeof(GLfloat) );
+      return;
+    }
+    cotangent = cos(radians) / sine;
+    matrix_identity(&m[0][0]);
+    m[0][0] = cotangent / aspect;
+    m[1][1] = cotangent;
+    m[2][2] = -(zFar + zNear) / deltaZ;
+    m[2][3] = -1;
+    m[3][2] = -2 * zNear * zFar / deltaZ;
+    m[3][3] = 0;
+    std::memcpy( out, &m[0][0], 16*sizeof(GLfloat) );
   }
 
   static inline void mult_matrix(const GLfloat a[16], const GLfloat b[16], GLfloat r[16])
@@ -90,68 +88,48 @@ namespace EGLRender
     }
   }
 
-
+  static inline GLfloat norm2(GLfloat v[3])
+  {
+    return v[0]*v[0] + v[1]*v[1] + v[2]*v[2];
+  }
+  
   static inline void normalize(GLfloat v[3])
   {
-      float r;
-
-      r = sqrt( v[0]*v[0] + v[1]*v[1] + v[2]*v[2] );
-      if (r == 0.0) return;
-
-      v[0] /= r;
-      v[1] /= r;
-      v[2] /= r;
+    float r;
+    r = sqrt( norm2(v) );
+    if (r == 0.0) return;
+    v[0] /= r;
+    v[1] /= r;
+    v[2] /= r;
   }
 
   static inline void cross(const GLfloat v1[3], const GLfloat v2[3], GLfloat result[3])
   {
-      result[0] = v1[1]*v2[2] - v1[2]*v2[1];
-      result[1] = v1[2]*v2[0] - v1[0]*v2[2];
-      result[2] = v1[0]*v2[1] - v1[1]*v2[0];
+    result[0] = v1[1]*v2[2] - v1[2]*v2[1];
+    result[1] = v1[2]*v2[0] - v1[0]*v2[2];
+    result[2] = v1[0]*v2[1] - v1[1]*v2[0];
   }
 
-  static inline void 
-  matrix_look_at( GLfloat out[16]
-                , GLfloat eyex, GLfloat eyey, GLfloat eyez
-                , GLfloat centerx, GLfloat centery, GLfloat centerz
-                , GLfloat upx, GLfloat upy, GLfloat upz)
+  void UniformCameraMatrix::update_modelview()
   {
-      float forward[3], side[3], up[3];
-      GLfloat m[4][4];
+    GLfloat m[4][4];
 
-      forward[0] = centerx - eyex;
-      forward[1] = centery - eyey;
-      forward[2] = centerz - eyez;
+    matrix_identity(&m[0][0]);
+    m[0][0] = m_side[0];
+    m[1][0] = m_side[1];
+    m[2][0] = m_side[2];
 
-      up[0] = upx;
-      up[1] = upy;
-      up[2] = upz;
+    m[0][1] = m_up[0];
+    m[1][1] = m_up[1];
+    m[2][1] = m_up[2];
 
-      normalize(forward);
-
-      /* Side = forward x up */
-      cross(forward, up, side);
-      normalize(side);
-
-      /* Recompute up as: up = side x forward */
-      cross(side, forward, up);
-
-      matrix_identity(&m[0][0]);
-      m[0][0] = side[0];
-      m[1][0] = side[1];
-      m[2][0] = side[2];
-
-      m[0][1] = up[0];
-      m[1][1] = up[1];
-      m[2][1] = up[2];
-
-      m[0][2] = -forward[0];
-      m[1][2] = -forward[1];
-      m[2][2] = -forward[2];
-      
-      GLfloat tmat[4][4];
-      matrix_translate(&tmat[0][0] , -eyex, -eyey, -eyez );
-      mult_matrix( &tmat[0][0], &m[0][0] , out );
+    m[0][2] = -m_forward[0];
+    m[1][2] = -m_forward[1];
+    m[2][2] = -m_forward[2];
+    
+    GLfloat tmat[4][4];
+    matrix_translate(&tmat[0][0] , -m_eye[0], -m_eye[1], -m_eye[2] );
+    mult_matrix( &tmat[0][0], &m[0][0] , m_modelview_matrix );
   }
 
   void UniformCameraMatrix::perspective(float fov, float ratio, float near, float far)
@@ -169,17 +147,30 @@ namespace EGLRender
     else matrix_identity( m_projection_matrix );
   }
 
-  void UniformCameraMatrix::look_at(const vec3& eye, const vec3& center)
+  void UniformCameraMatrix::look_at(const vec3& eye, const vec3& center, const vec3& up )
   {
     m_eye = eye;
     m_center = center;
+
+    m_forward[0] = center[0] - eye[0];
+    m_forward[1] = center[1] - eye[1];
+    m_forward[2] = center[2] - eye[2];
+
+    m_up[0] = up[0];
+    m_up[1] = up[1];
+    m_up[2] = up[2];
+
+    normalize(m_forward.data());
+
+    /* Side = forward x up */
+    cross(m_forward.data(), m_up.data(), m_side.data());
+    normalize(m_side.data());
+
+    /* Recompute up as: up = side x forward */
+    cross(m_side.data(), m_forward.data(), m_up.data());
+
     update_modelview();
-  }
-  
-  void UniformCameraMatrix::update_modelview()
-  {
-    matrix_look_at(m_modelview_matrix, m_eye[0],m_eye[1],m_eye[2], m_center[0],m_center[1],m_center[2], m_up[0],m_up[1],m_up[2]);
-  }
+   }
   
   void UniformCameraMatrix::attach_to_shader(std::shared_ptr<GLShaderProgram> prog, std::string_view uniform_name, std::string_view mvmat_name, std::string_view projmat_name)
   {
@@ -227,4 +218,40 @@ namespace EGLRender
     mult_matrix_vec( m_modelview_matrix, in, mout );
     mult_matrix_vec( m_projection_matrix, mout, out );
   }
+  
+  void UniformCameraMatrix::tilt( GLfloat angle_h, GLfloat angle_v )
+  {
+    constexpr auto DEG2RAD = acos(-1.0f) / 180.0f;
+    const auto sh = sin(angle_h*DEG2RAD);
+    const auto sv = sin(angle_v*DEG2RAD);
+     
+    for(int i=0;i<3;i++) m_up[i] -= m_forward[i] * sv;
+    normalize( m_up.data() );
+    cross( m_side.data(), m_up.data(), m_forward.data() );
+    for(int i=0;i<3;i++) m_forward[i] *= -1.0f;
+    
+    for(int i=0;i<3;i++) m_forward[i] -= m_side[i] * sh;
+    normalize( m_forward.data() );
+    cross( m_up.data(), m_forward.data(), m_side.data() );
+    for(int i=0;i<3;i++) m_side[i] *= -1.0f;
+    normalize( m_side.data() );
+    
+    vec3 ec = { m_center[0]-m_eye[0] , m_center[1]-m_eye[1] , m_center[2]-m_eye[2] };
+    GLfloat dist = sqrt( norm2(ec.data()) );
+    for(int i=0;i<3;i++) m_center[i] = m_eye[i] + m_forward[i] * dist;
+
+    update_modelview();
+  }
+  
+  void UniformCameraMatrix::move( GLfloat s, GLfloat u, GLfloat f )
+  {
+    for(int i=0;i<3;i++)
+    {
+      GLfloat t = s * m_side[i] + u * m_up[i] + f * m_forward[i];
+      m_eye[i] += t;
+      m_center[i] += t;
+    }
+    update_modelview();
+  }
+  
 }

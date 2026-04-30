@@ -173,73 +173,87 @@ int main(int argc, char *argv[])
   {
     struct
     {
-      GLfloat cam_dist = 5.0f;
-      GLfloat angle_h = 0.0f;
-      GLfloat angle_v = 0.0f;
+      GLfloat move[3] = { 0.0f , 0.0f , 0.0f };
+      GLfloat tilt[2] = { 0.0f , 0.0f };
       int mouse_last_x = -1;
       int mouse_last_y = -1;
       int should_exit = false;
       int left_drag = false;
+      int mid_drag = false;
       int right_drag = false;
     } uistate;
 
+    int update_cam = 0;
     auto & ren_surf = eglm.surface("main_window");
+    ren_surf.m_event_handler.on_key_release = [&uistate,f=ren_surf.m_event_handler.on_key_release](int key)
+    {
+       if( f ) f(key);
+       if( key == 65307 ) uistate.should_exit = true;
+    };
     ren_surf.m_event_handler.on_button_press = [&uistate,f=ren_surf.m_event_handler.on_button_press](int state, int b, int x,int y)
+    {
+      if( f ) f(state,b,x,y);
+      switch( b )
       {
-        f(state,b,x,y);
-        switch( b )
-        {
-          case 1 : uistate.left_drag=true; break;
-          case 2 : uistate.right_drag=true; break;
-          case 3 : uistate.should_exit=true; break;
-        }
-      };
+        case 1 : uistate.left_drag=true; break;
+        case 2 : uistate.mid_drag=true; break;
+        case 3 : uistate.right_drag=true; break;
+      }
+    };
     ren_surf.m_event_handler.on_button_release = [&uistate,f=ren_surf.m_event_handler.on_button_release](int state, int b, int x,int y)
+    {
+      if( f ) f(state,b,x,y);
+      switch( b )
       {
-        f(state,b,x,y);
-        switch( b )
-        {
-          case 1 : uistate.left_drag=false; break;
-          case 2 : uistate.right_drag=false; break;
-        }
-      };
-    ren_surf.m_event_handler.on_mouse_move = [&uistate,&camera,f=ren_surf.m_event_handler.on_mouse_move](int x,int y)
+        case 1 : uistate.left_drag=false; break;
+        case 2 : uistate.mid_drag=false; break;
+        case 3 : uistate.right_drag=false; break;
+      }
+    };
+    ren_surf.m_event_handler.on_mouse_move = [&uistate,&camera,&update_cam,f=ren_surf.m_event_handler.on_mouse_move](int x,int y)
+    {
+      if( f ) f(x,y);
+      int dx = x - uistate.mouse_last_x;
+      int dy = y - uistate.mouse_last_y;
+      if( uistate.left_drag )
       {
-        f(x,y);
-        int dx = x - uistate.mouse_last_x;
-        int dy = y - uistate.mouse_last_y;
-        bool update_cam = false;
-        if( uistate.left_drag )
-        {
-          uistate.angle_h += dx * 0.01f;
-          uistate.angle_v += dy * 0.01f;
-          update_cam = true;        
-        }
-        else if( uistate.right_drag )
-        {
-          uistate.cam_dist += dy * 0.01f;
-          update_cam = true;
-        }
-        if(update_cam)
-        {
-          const auto d = uistate.cam_dist;
-          const auto h = uistate.angle_h;
-          const auto v = uistate.angle_v;
-          GLfloat eyeZ = d * cos(v);
-          GLfloat eyeY = d * sin(v);
-          GLfloat eyeX = eyeZ * sin(h);
-          eyeZ = eyeZ * cos(v);
-          camera.look_at( {eyeX,eyeY,eyeZ} , {0,0,0} );
-        }
-        uistate.mouse_last_x = x;
-        uistate.mouse_last_y = y;
-      };
+        uistate.tilt[0] += dx * 0.1f;
+        uistate.tilt[1] += dy * 0.1f;
+        update_cam = 1;        
+      }
+      if( uistate.mid_drag )
+      {
+        uistate.move[0] += dx * 0.02f;
+        uistate.move[1] += dy * 0.02f;
+        update_cam = 1;
+      }
+      if( uistate.right_drag )
+      {
+        uistate.move[2] += dy * 0.02f;
+        update_cam = 1;
+      }
+      uistate.mouse_last_x = x;
+      uistate.mouse_last_y = y;
+    };
 
     int i=0;
     bool first = true;
     while( ! uistate.should_exit )
     {
       ren_surf.process_events();
+
+      if(update_cam)
+      {
+        camera.tilt( uistate.tilt[0] , uistate.tilt[1] );
+        camera.move( uistate.move[0] , uistate.move[1] , uistate.move[2] );
+        uistate.tilt[0] = 0.0f;
+        uistate.tilt[1] = 0.0f;
+        uistate.move[0] = 0.0f;
+        uistate.move[1] = 0.0f;
+        uistate.move[2] = 0.0f;
+        update_cam = 0;
+      }
+
       ren_surf.make_current();
 
       camera.update_uniform();
