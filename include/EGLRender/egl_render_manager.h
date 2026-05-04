@@ -52,7 +52,7 @@ namespace EGLRender
 
     void init_platform(bool use_native_dpy=true, bool gles_mode=false);
     int create_surface( std::string_view name, EGLRenderSurfaceClass surf_type=EGLRenderSurfaceClass::PBUFFER, EGLint w=1920, EGLint h=1080, EGLint colbits=8, EGLint alphabits=8, EGLint zbits=24 , EGLint stencilbits=8);
-    int create_shader_program( std::string_view name, std::span<GLShaderSource> sources , const GLPipelineConfig& pc = GLPipelineConfig{} );
+    int create_shader_program( std::string_view name, std::span<GLShaderTypeSource> sources , const GLPipelineConfig& pc = GLPipelineConfig{} );
     int create_vertex_buffers( std::string_view name, GLuint n_vertices, std::span<const GLint> attrib_formats );
     int create_vertex_buffers( std::string_view name, GLuint n_vertices, const std::vector<GLint>& attrib_formats );
     int create_camera( std::string_view name );

@@ -52,7 +52,7 @@ int main(int argc, char *argv[])
 
   std::cout<<"OpenGL "<<gl_string_non_null(glGetString(GL_VERSION))<<std::endl;
 
-  std::vector<GLShaderSource> shader_sources = {
+  std::vector<GLShaderTypeSource> shader_sources = {
     { GL_VERTEX_SHADER , R"EOF(
     #version 430 core
     #extension GL_ARB_shading_language_include : require

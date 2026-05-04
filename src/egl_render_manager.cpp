@@ -58,7 +58,7 @@ namespace EGLRender
     return surf_id;
   }
 
-  int EGLRenderManager::create_shader_program( std::string_view name, std::span<GLShaderSource> sources, const GLPipelineConfig& pc )
+  int EGLRenderManager::create_shader_program( std::string_view name, std::span<GLShaderTypeSource> sources, const GLPipelineConfig& pc )
   {
     if( m_prog_names.find(name.data()) != m_prog_names.end() )
     {

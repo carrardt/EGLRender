@@ -55,7 +55,7 @@ namespace EGLRender
     return input;
   }
 
-  std::vector<GLuint> GLShaderProgram::compile_shaders(std::span<GLShaderSource> shader_sources)
+  std::vector<GLuint> GLShaderProgram::compile_shaders(std::span<GLShaderTypeSource> shader_sources)
   {
     std::vector<GLuint> shader_ids;
     for(const auto& shader : shader_sources)

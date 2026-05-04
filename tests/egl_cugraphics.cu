@@ -87,7 +87,7 @@ int main(int argc, char *argv[])
   for(unsigned int i=0;i<cudaDeviceCount;i++) std::cout<<((i>0)?",":"")<<cudaDevices[i];
   std::cout<<"]"<<std::endl;
 
-  std::vector<GLShaderSource> shader_sources = {
+  std::vector<GLShaderTypeSource> shader_sources = {
     { GL_VERTEX_SHADER , R"EOF(
     #version 430 core
     #extension GL_ARB_shading_language_include : require

@@ -117,7 +117,7 @@ namespace EGLRender
     ~GLUniformBlock();
   };
 
-  struct GLShaderSource
+  struct GLShaderTypeSource
   {
     GLenum m_type = GL_NONE;
     std::string m_source = "";
@@ -129,7 +129,7 @@ namespace EGLRender
     static std::map<std::string,std::string> s_shader_includes;
     static void load_shader_includes(const std::string& base_dir="");
     
-    std::vector<GLShaderSource> m_shader_sources = {
+    std::vector<GLShaderTypeSource> m_shader_sources = {
       { GL_VERTEX_SHADER, R"EOF(
       #version 330 core
       layout (location = 0) in vec3 aPos;
@@ -154,7 +154,7 @@ namespace EGLRender
     std::vector<GLUniformBlock> m_uniforms = init_uniform_blocks(m_shader_program);
     
     static std::string parse_shader_includes(const std::string& shader_source);
-    static std::vector<GLuint> compile_shaders(std::span<GLShaderSource> shader_sources);
+    static std::vector<GLuint> compile_shaders(std::span<GLShaderTypeSource> shader_sources);
     static GLuint link_program(std::span<GLuint> shaders);
     static std::vector<GLUniformBlock> init_uniform_blocks(GLuint prog);
 
