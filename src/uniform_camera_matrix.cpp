@@ -172,7 +172,11 @@ namespace EGLRender
     update_modelview();
    }
   
-  void UniformCameraMatrix::attach_to_shader(std::shared_ptr<GLShaderProgram> prog, std::string_view uniform_name, std::string_view mvmat_name, std::string_view projmat_name)
+  void UniformCameraMatrix::attach_to_shader( std::shared_ptr<GLShaderProgram> prog
+                                            , std::string_view uniform_name
+                                            , std::string_view mvmat_name
+                                            , std::string_view projmat_name
+                                            , std::string_view aspectname )
   {
     m_shader = prog;
     if( m_shader == nullptr ) return;
@@ -182,19 +186,26 @@ namespace EGLRender
       std::cerr << "EGL Error: uniform block '"<<uniform_name<<"' not found in shader #"<<prog->m_shader_program <<std::endl;
       std::abort();
     }
-    m_modelview_variable_id = prog->uniform(m_block_id).variable_id(mvmat_name);
-    if(m_modelview_variable_id==-1)
+    m_modelview_id = prog->uniform(m_block_id).variable_id(mvmat_name);
+    if(m_modelview_id==-1)
     {
       std::cerr << "EGL Error: variable '"<<mvmat_name<<"' not found in uniform block '"<<uniform_name<<"'" <<std::endl;
       std::abort();
     }
-    m_projection_variable_id = prog->uniform(m_block_id).variable_id(projmat_name);
-    if(m_projection_variable_id==-1)
+    m_projection_id = prog->uniform(m_block_id).variable_id(projmat_name);
+    if(m_projection_id==-1)
     {
       std::cerr << "EGL Error: variable '"<<projmat_name<<"' not found in uniform block '"<<uniform_name<<"'" <<std::endl;
       std::abort();
     }
-    std::cout << "atached to shader's block #"<<m_block_id<<", modelview is variable #"<<m_modelview_variable_id<<", projection variable is #"<<m_projection_variable_id<<std::endl;
+    m_aspect_ratio_id = prog->uniform(m_block_id).variable_id(aspectname);
+    if(m_aspect_ratio_id==-1)
+    {
+      std::cerr << "EGL Error: variable '"<<aspectname<<"' not found in uniform block '"<<uniform_name<<"'" <<std::endl;
+      std::abort();
+    }
+    std::cout << "attached to block #"<<m_block_id<<", modelview var #"<<m_modelview_id<<", projection var #"<<m_projection_id
+              << ", aspect_ration var #"<<m_aspect_ratio_id << std::endl;
   }
 
   void UniformCameraMatrix::update_uniform()
@@ -205,8 +216,9 @@ namespace EGLRender
     if( std::isnan(m_modelview_matrix[0]) ) update_modelview();
     if( std::isnan(m_projection_matrix[0]) ) update_projection();
 
-    m_shader->uniform(m_block_id).variable(m_modelview_variable_id).set( m_modelview_matrix, 16 );
-    m_shader->uniform(m_block_id).variable(m_projection_variable_id).set( m_projection_matrix, 16 );
+    m_shader->uniform(m_block_id).variable(m_modelview_id).set( m_modelview_matrix, 16 );
+    m_shader->uniform(m_block_id).variable(m_projection_id).set( m_projection_matrix, 16 );
+    m_shader->uniform(m_block_id).variable(m_aspect_ratio_id).set( m_aspect_ratio );
   }
 
   void UniformCameraMatrix::transform(const GLfloat in[4], GLfloat out[4])

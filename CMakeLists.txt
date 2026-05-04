@@ -126,6 +126,7 @@ install(TARGETS EGLRender
         INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
         )
 install(DIRECTORY include/EGLRender TYPE INCLUDE)
+#install(DIRECTORY shaders DESTINATION ${CMAKE_INSTALL_DATAROOTDIR})
 install(EXPORT EGLRenderTargets NAMESPACE EGLRender:: DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake)
 
 # sample test with vertex, geometry and fragment shader

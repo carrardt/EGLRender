@@ -48,15 +48,22 @@ namespace EGLRender
 
     std::shared_ptr<GLShaderProgram> m_shader = nullptr; // shader to write matrices to
     GLint m_block_id = -1;
-    GLint m_modelview_variable_id = -1;
-    GLint m_projection_variable_id = -1;
+    GLint m_modelview_id = -1;
+    GLint m_projection_id = -1;
+    GLint m_aspect_ratio_id = -1;
 
     void perspective(float fov, float ratio, float near, float far);
     void look_at( const vec3& eye, const vec3& center, const vec3& up = {0.0f,1.0f,0.0f} );
     void tilt( GLfloat horiz_angle, GLfloat vert_angle );
     void move( GLfloat side, GLfloat up, GLfloat forward );
-    
-    void attach_to_shader( std::shared_ptr<GLShaderProgram> prog, std::string_view uniform_name, std::string_view mvmat_name, std::string_view projmat_name );
+
+    // default names are those defined in include header "uniform/camera"
+    void attach_to_shader( std::shared_ptr<GLShaderProgram> prog
+                         , std::string_view block = "camera"
+                         , std::string_view mvmat = "modelview"
+                         , std::string_view projmat = "projection"
+                         , std::string_view aspectname = "aspect_ratio" );
+                         
     void update_uniform();
 
     void update_modelview();
