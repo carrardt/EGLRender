@@ -23,6 +23,7 @@ under the License.
 #include <string>
 #include <iostream>
 #include <map>
+#include <span>
 
 namespace EGLRender
 {
@@ -116,46 +117,45 @@ namespace EGLRender
     ~GLUniformBlock();
   };
 
+  struct GLShaderSource
+  {
+    GLenum m_type = GL_NONE;
+    std::string m_source = "";
+  };
+
   // GL Shader program encapsulation
   struct GLShaderProgram
   {
     static std::map<std::string,std::string> s_shader_includes;
     static void load_shader_includes(const std::string& base_dir="");
     
-    std::string m_vertex_shader_source =
-  R"EOF(
-        #version 330 core
-        layout (location = 0) in vec3 aPos;
-        void main()
-        {
-            gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);
-        }
-  )EOF";
-
-    std::string m_geometry_shader_source = {};
-
-    std::string m_fragment_shader_source =
-  R"EOF(
-        #version 330 core
-        out vec4 FragColor;
-        void main()
-        {
-            FragColor = vec4(1.0f, 1.0f, 1.0f, 1.0f);
-        }
-  )EOF";
+    std::vector<GLShaderSource> m_shader_sources = {
+      { GL_VERTEX_SHADER, R"EOF(
+      #version 330 core
+      layout (location = 0) in vec3 aPos;
+      void main()
+      {
+          gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);
+      }
+      )EOF" } ,
+      { GL_FRAGMENT_SHADER, R"EOF(
+      #version 330 core
+      out vec4 FragColor;
+      void main()
+      {
+          FragColor = vec4(1.0f, 1.0f, 1.0f, 1.0f);
+      }
+      )EOF" } };
 
     GLPipelineConfig m_pipeline_config = {};
-
-    GLuint m_vertex_shader   = compile_shader(m_vertex_shader_source, GL_VERTEX_SHADER);
-    GLuint m_geometry_shader = compile_shader(m_geometry_shader_source, GL_GEOMETRY_SHADER);
-    GLuint m_fragment_shader = compile_shader(m_fragment_shader_source, GL_FRAGMENT_SHADER);
-    GLuint m_shader_program  = link_program( m_vertex_shader, m_geometry_shader, m_fragment_shader );
-
+      
+    std::vector<GLuint> m_shaders = compile_shaders( m_shader_sources );
+    GLuint m_shader_program  = link_program( m_shaders );
     std::vector<GLUniformBlock> m_uniforms = init_uniform_blocks(m_shader_program);
-
+    
     static std::string parse_shader_includes(const std::string& shader_source);
-    static GLuint compile_shader(const std::string& shader_source, GLenum shader_type);
-    static GLuint link_program(GLuint vertShaderId, GLuint geomShaderId, GLuint fragShaderId);
+    static std::vector<GLuint> compile_shaders(std::span<GLShaderSource> shader_sources);
+    static GLuint link_program(std::span<GLuint> shaders);
     static std::vector<GLUniformBlock> init_uniform_blocks(GLuint prog);
 
     GLUniformBlock& uniform(int id);

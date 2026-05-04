@@ -52,9 +52,8 @@ int main(int argc, char *argv[])
 
   std::cout<<"OpenGL "<<gl_string_non_null(glGetString(GL_VERSION))<<std::endl;
 
-  const auto shader_prog_id = eglm.create_shader_program(
-    "rotating_triangle" ,
-    /* vertex shader */ R"EOF(
+  std::vector<GLShaderSource> shader_sources = {
+    { GL_VERTEX_SHADER , R"EOF(
     #version 430 core
     #extension GL_ARB_shading_language_include : require
     #include <uniform/camera>
@@ -67,8 +66,8 @@ int main(int argc, char *argv[])
       gl_Position = mvp * aPos;
       geomAngle = aAngle;
     }
-    )EOF" ,
-    /* geometry shader */ R"EOF(
+    )EOF" } ,
+    { GL_GEOMETRY_SHADER , R"EOF(
     #version 430 core
     layout (points) in;
     layout (triangle_strip, max_vertices=3) out;
@@ -85,8 +84,8 @@ int main(int argc, char *argv[])
       }
       EndPrimitive();
     }
-    )EOF" ,
-    /* fragment shader */ R"EOF(
+    )EOF" } ,
+    { GL_FRAGMENT_SHADER , R"EOF(
     #version 430 core
     in vec4 aColor;
     out vec4 FragColor;
@@ -94,9 +93,10 @@ int main(int argc, char *argv[])
     {
       FragColor = aColor;
     }
-    )EOF" ,
-    { .m_enable_flags = { GL_PROGRAM_POINT_SIZE } }
-  );
+    )EOF" }
+    };
+
+  const auto shader_prog_id = eglm.create_shader_program( "rotating_triangle" , shader_sources, { .m_enable_flags = { GL_PROGRAM_POINT_SIZE } } );
 
   auto & shader = eglm.shader_program(shader_prog_id);
 

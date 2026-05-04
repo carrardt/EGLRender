@@ -87,47 +87,51 @@ int main(int argc, char *argv[])
   for(unsigned int i=0;i<cudaDeviceCount;i++) std::cout<<((i>0)?",":"")<<cudaDevices[i];
   std::cout<<"]"<<std::endl;
 
-  const auto shader_prog_id = eglm.create_shader_program(
-    "rotating_triangle" ,
-    /* vertex shader */ R"EOF(
-    #version 330 core
+  std::vector<GLShaderSource> shader_sources = {
+    { GL_VERTEX_SHADER , R"EOF(
+    #version 430 core
+    #extension GL_ARB_shading_language_include : require
+    #include <uniform/camera>
     layout (location = 0) in vec4 aPos;
     layout (location = 1) in float aAngle;
     out float geomAngle;
     void main()
     {
-        gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);
-        geomAngle = aAngle;
+      mat4 mvp = projection * modelview;
+      gl_Position = mvp * aPos;
+      geomAngle = aAngle;
     }
-    )EOF" ,
-    /* geometry shader */ R"EOF(
-    #version 330 core
+    )EOF" } ,
+    { GL_GEOMETRY_SHADER , R"EOF(
+    #version 430 core
     layout (points) in;
     layout (triangle_strip, max_vertices=3) out;
     in float geomAngle[];
     out vec4 aColor;
-    void main() {
-        vec4 aPos = gl_in[0].gl_Position;
-        aColor = vec4( clamp(aPos.x,0.15f,1.0f), clamp(aPos.y,0.15f,1.0f), clamp(aPos.x+aPos.y,0.15f,1.0f), 1.0f );
-        for(int i=0;i<3;i++)
-        {
-          gl_Position = gl_in[0].gl_Position + vec4( cos(geomAngle[0]+i*2*3.14159/3)*0.02 , sin(geomAngle[0]+i*2*3.14159/3)*0.02, 0.0 , 0.0 );
-          EmitVertex();
-        }
-        EndPrimitive();
+    void main()
+    {
+      vec4 aPos = gl_in[0].gl_Position;
+      aColor = vec4( clamp(aPos.x,0.1f,1.0f), clamp(aPos.y,0.1f,1.0f), clamp(aPos.x+aPos.y,0.1f,1.0f), 1.0f );
+      for(int i=0;i<3;i++)
+      {
+        gl_Position = gl_in[0].gl_Position + vec4( cos(geomAngle[0]+i*2*3.14159/3)*0.02 , sin(geomAngle[0]+i*2*3.14159/3)*0.02, 0.0 , 0.0 );
+        EmitVertex();
+      }
+      EndPrimitive();
     }
-    )EOF" ,
-    /* fragment shader */ R"EOF(
-    #version 330 core
+    )EOF" } ,
+    { GL_FRAGMENT_SHADER , R"EOF(
+    #version 430 core
     in vec4 aColor;
     out vec4 FragColor;
     void main()
     {
-        FragColor = aColor;
+      FragColor = aColor;
     }
-    )EOF" ,
-    { .m_enable_flags = { GL_PROGRAM_POINT_SIZE } }
-  );
+    )EOF" }
+    };
+
+  const auto shader_prog_id = eglm.create_shader_program( "rotating_triangle" ,shader_sources , { .m_enable_flags = { GL_PROGRAM_POINT_SIZE } } );
   std::cout << "Pipeline config :" << std::boolalpha << std::endl;
   eglm.shader_program(shader_prog_id).m_pipeline_config.to_stream( std::cout );
   eglm.shader_program(shader_prog_id).use();

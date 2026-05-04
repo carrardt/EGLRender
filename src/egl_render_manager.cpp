@@ -20,6 +20,7 @@ under the License.
 #include <EGLRender/egl_render_manager.h>
 #include <iostream>
 #include <string_view>
+#include <ranges>
 
 namespace EGLRender
 {
@@ -57,7 +58,7 @@ namespace EGLRender
     return surf_id;
   }
 
-  int EGLRenderManager::create_shader_program( std::string_view name, std::string_view vs, std::string_view gs, std::string_view fs, const GLPipelineConfig& pc )
+  int EGLRenderManager::create_shader_program( std::string_view name, std::span<GLShaderSource> sources, const GLPipelineConfig& pc )
   {
     if( m_prog_names.find(name.data()) != m_prog_names.end() )
     {
@@ -66,7 +67,7 @@ namespace EGLRender
     }
     const size_t prog_id = m_programs.size();
     m_prog_names[name.data()] = prog_id;
-    m_programs.emplace_back( new GLShaderProgram { vs.data(), gs.data(), fs.data(), pc } );
+    m_programs.emplace_back( new GLShaderProgram { {sources.begin(), sources.end()} , pc } );
 #   ifndef NDEBUG
     std::cout << "EGL : shader program '"<<name<<"' @"<<prog_id<<std::endl;
 #   endif

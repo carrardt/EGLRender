@@ -55,44 +55,48 @@ namespace EGLRender
     return input;
   }
 
-  GLuint GLShaderProgram::compile_shader(const std::string& shader_source, GLenum shader_type)
+  std::vector<GLuint> GLShaderProgram::compile_shaders(std::span<GLShaderSource> shader_sources)
   {
-    auto parsed_shader_source = parse_shader_includes(shader_source);
-    const char * src [] = { parsed_shader_source.data() };
-    if( shader_source.empty() ) return 0;
-    GLuint shaderId = glCreateShader(shader_type);
-    glShaderSource(shaderId, 1, src, NULL);
-    glCompileShader(shaderId);
-    GLint compile_status = 0;
-    glGetShaderiv(shaderId, GL_COMPILE_STATUS, &compile_status);
-    if( ! compile_status )
+    std::vector<GLuint> shader_ids;
+    for(const auto& shader : shader_sources)
     {
-      GLint info_log_len = 0;
-      glGetShaderiv(shaderId,GL_INFO_LOG_LENGTH,&info_log_len);
-      auto log_data = std::make_unique_for_overwrite<char[]>(info_log_len+2);
-      glGetShaderInfoLog(shaderId,info_log_len,&info_log_len,log_data.get());      
-      log_data[info_log_len] = '\0';
-      std::cerr << "Shader #"<<shaderId<<" : " << ( (info_log_len>0) ? log_data.get() : "ok" ) << std::endl;
+      auto parsed_shader_source = parse_shader_includes(shader.m_source);
+      if( ! parsed_shader_source.empty() )
+      {
+        const char * src [] = { parsed_shader_source.data() };
+        GLuint shaderId = glCreateShader(shader.m_type);
+        glShaderSource(shaderId, 1, src, NULL);
+        glCompileShader(shaderId);
+        GLint compile_status = 0;
+        glGetShaderiv(shaderId, GL_COMPILE_STATUS, &compile_status);
+        if( ! compile_status )
+        {
+          GLint info_log_len = 0;
+          glGetShaderiv(shaderId,GL_INFO_LOG_LENGTH,&info_log_len);
+          auto log_data = std::make_unique_for_overwrite<char[]>(info_log_len+2);
+          glGetShaderInfoLog(shaderId,info_log_len,&info_log_len,log_data.get());      
+          log_data[info_log_len] = '\0';
+          std::cerr << "Shader #"<<shaderId<<" : " << ( (info_log_len>0) ? log_data.get() : "ok" ) << std::endl;
+          glDeleteShader( shaderId );
+        }
+        else
+        {
+#         ifndef NDEBUG
+          std::cout << "Shader #"<<shaderId<<" Ok"<<std::endl;
+#         endif
+          shader_ids.push_back( shaderId );
+        }
+      }
     }
-#   ifndef NDEBUG
-    else
-    {
-      std::cout << "Shader #"<<shaderId<<" Ok"<<std::endl;
-    }
-#   endif
-    return shaderId;
+    return shader_ids;
   }
 
-  GLuint GLShaderProgram::link_program(GLuint vertShaderId, GLuint geomShaderId, GLuint fragShaderId)
+  GLuint GLShaderProgram::link_program(std::span<GLuint> shaders)
   {
-    if( vertShaderId==0 && geomShaderId==0 && fragShaderId==0 ) return 0;
-
+    if( shaders.empty() ) return 0;
     GLuint prog = glCreateProgram();
-    if( vertShaderId != 0 ) glAttachShader(prog, vertShaderId);
-    if( geomShaderId != 0 ) glAttachShader(prog, geomShaderId);
-    if( fragShaderId != 0 ) glAttachShader(prog, fragShaderId);
+    for(auto shid : shaders) glAttachShader(prog, shid);
     glLinkProgram(prog);
-
     GLint link_status = 0;
     glGetProgramiv(prog, GL_LINK_STATUS, &link_status);
     if( ! link_status )
@@ -103,6 +107,8 @@ namespace EGLRender
       glGetProgramInfoLog(prog,info_log_len,&info_log_len,log_data.get());
       log_data[info_log_len] = '\0';
       std::cerr << "Program #"<<prog<<" : " << ( (info_log_len>0) ? log_data.get() : "ok" ) << std::endl;
+      glDeleteProgram(prog);
+      return 0;
     }
 #   ifndef NDEBUG
     else
@@ -110,7 +116,6 @@ namespace EGLRender
       std::cout << "Program #"<<prog<<" Ok"<<std::endl;
     }
 #   endif
-
     return prog;
   }
 
@@ -172,9 +177,7 @@ namespace EGLRender
   {
     glUseProgram(0);
     glDeleteProgram(m_shader_program);
-    glDeleteShader(m_vertex_shader);
-    glDeleteShader(m_geometry_shader);
-    glDeleteShader(m_fragment_shader);
+    for(auto id : m_shaders) glDeleteShader(id);
   }
 
   GLUniformBlock& GLShaderProgram::uniform(int i)
