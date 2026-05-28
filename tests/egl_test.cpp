@@ -55,14 +55,11 @@ int main(int argc, char *argv[])
   std::vector<GLShaderTypeSource> shader_sources = {
     { GL_VERTEX_SHADER , R"EOF(
     #version 450 core
-    #extension GL_ARB_shading_language_include : require
-    #include <uniform/camera>
     layout (location = 0) in vec4 aPos;
     layout (location = 1) in float aAngle;
     out float geomAngle;
     void main()
     {
-      //mat4 mvp = projection * modelview;
       gl_Position = aPos;
       geomAngle = aAngle;
     }
@@ -73,7 +70,7 @@ int main(int argc, char *argv[])
     #include <uniform/camera>
     #include <quadrics/convex_hull>
     layout (points) in;
-    layout (line_strip, max_vertices=8) out;
+    layout (triangle_strip, max_vertices=12) out;
     in float geomAngle[];
     out vec4 aColor;
     void main()
@@ -84,19 +81,16 @@ int main(int argc, char *argv[])
       float s = 0.1;
       mat4 varianceMatrix = { vec4(s,0,0,0) , vec4(0,s,0,0) , vec4(0,0,s,0) , aPos };
       ConvexHull2D hull = quadricsProj2DConvexHull( mvp, varianceMatrix );
-      float z = ( mvp * aPos ).z ;
-      float w = ( mvp * aPos ).w ;
-      gl_Position = vec4( hull.v[0].x , hull.v[0].y , z , w );
-      EmitVertex();
-      for(int i=1;i<hull.n;i++)
+      for(int i=2;i<hull.n;i++)
       {
-        // cos(geomAngle[0]+i*2*3.14159/hull.n)*0.02 , sin(geomAngle[0]+i*2*3.14159/hull.n)*0.02
-        gl_Position = vec4( hull.v[i].x , hull.v[i].y , z , w );
+        gl_Position = vec4( hull.v[0].x , hull.v[0].y , hull.center.z , hull.center.w );
         EmitVertex();
+        gl_Position = vec4( hull.v[i-1].x , hull.v[i-1].y , hull.center.z , hull.center.w );
+        EmitVertex();
+        gl_Position = vec4( hull.v[i].x , hull.v[i].y , hull.center.z , hull.center.w );
+        EmitVertex();
+        EndPrimitive();
       }
-      gl_Position = vec4( hull.v[0].x , hull.v[0].y , z , w );
-      EmitVertex();
-      EndPrimitive();
     }
     )EOF" } ,
     { GL_FRAGMENT_SHADER , R"EOF(

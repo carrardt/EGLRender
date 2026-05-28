@@ -16,7 +16,7 @@ bool rightOf( const vec2 a, const vec2 b, const vec2 p ) { return vec2side(a,b,p
 struct ConvexHull2D
 {
   vec2 v[8];
-  float z,w;
+  vec4 center;
   int n;
 };
 
@@ -138,6 +138,7 @@ ConvexHull2D quadricsProj2DConvexHull( const mat4 modelViewProjMatrix, const mat
   vec4 v6 = M * vec4( dxp, dyp, dzp, 1. );
   vec4 v7 = M * vec4( dxm, dyp, dzp, 1. );
 
+  g_cvh.center =  M * vec4( 0, 0, 0, 1. );
   g_cvh.v[0] = v0.xy / v0.w;
   g_cvh.v[1] = v1.xy / v1.w;
   g_cvh.v[2] = v2.xy / v2.w;
