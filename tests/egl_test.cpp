@@ -81,8 +81,9 @@ int main(int argc, char *argv[])
       vec4 aPos = gl_in[0].gl_Position;
       aColor = vec4( clamp(aPos.x,0.1f,1.0f), clamp(aPos.y,0.1f,1.0f), clamp(aPos.x+aPos.y,0.1f,1.0f), 1.0f );
       mat4 mvp = projection * modelview;
-      mat4 varianceMatrix = { vec4(1,0,0,0) , vec4(0,1,0,0) , vec4(0,0,1,0) , vec4(0,0,0,1) };
-      ConvexHull2D hull = quadricsProj2DConvexHull( mvp, varianceMatrix , aPos , 0.1 );
+      float s = 0.1;
+      mat4 varianceMatrix = { vec4(s,0,0,0) , vec4(0,s,0,0) , vec4(0,0,s,0) , aPos };
+      ConvexHull2D hull = quadricsProj2DConvexHull( mvp, varianceMatrix );
       float z = ( mvp * aPos ).z ;
       float w = ( mvp * aPos ).w ;
       gl_Position = vec4( hull.v[0].x , hull.v[0].y , z , w );
@@ -93,6 +94,8 @@ int main(int argc, char *argv[])
         gl_Position = vec4( hull.v[i].x , hull.v[i].y , z , w );
         EmitVertex();
       }
+      gl_Position = vec4( hull.v[0].x , hull.v[0].y , z , w );
+      EmitVertex();
       EndPrimitive();
     }
     )EOF" } ,
@@ -123,7 +126,7 @@ int main(int argc, char *argv[])
 
   shader.use();
 
-  const int n_points = 64;
+  const int n_points = 4;
   const auto buf_id = eglm.create_vertex_buffers("vertex_attribs",n_points , { GL_FLOAT,4, GL_FLOAT,1 } );
 
   glColorMask (GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
@@ -189,6 +192,7 @@ int main(int argc, char *argv[])
       int mouse_last_x = -1;
       int mouse_last_y = -1;
       int should_exit = false;
+      int motion = true;
       int left_drag = false;
       int mid_drag = false;
       int right_drag = false;
@@ -199,6 +203,7 @@ int main(int argc, char *argv[])
     ren_surf.m_event_handler.on_key_release = [&uistate,f=ren_surf.m_event_handler.on_key_release](int key)
     {
        if( f ) f(key);
+       if( key == 32 ) uistate.motion = ! uistate.motion;
        if( key == 65307 ) uistate.should_exit = true;
     };
     ren_surf.m_event_handler.on_button_press = [&uistate,f=ren_surf.m_event_handler.on_button_press](int state, int b, int x,int y)
@@ -297,7 +302,7 @@ int main(int argc, char *argv[])
       glDrawArrays(GL_POINTS, 0, n_points);
 
       ren_surf.swap_buffers();
-      ++i;
+      if( uistate.motion ) ++i;
     }
   }
 

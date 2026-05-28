@@ -16,6 +16,7 @@ bool rightOf( const vec2 a, const vec2 b, const vec2 p ) { return vec2side(a,b,p
 struct ConvexHull2D
 {
   vec2 v[8];
+  float z,w;
   int n;
 };
 
@@ -117,27 +118,26 @@ void cvh_heap_sort()
 // Generic bounding box computation, works with any quadric type by splatting
 // in clip space the bounding box in parameter space;
 // in most cases you'll have to use a point scaling factor from 1.05 to 1.5
-ConvexHull2D quadricsProj2DConvexHull( const mat4 modelViewProjMatrix, const mat4 varianceMatrix, const vec4 p, float s )
+ConvexHull2D quadricsProj2DConvexHull( const mat4 modelViewProjMatrix, const mat4 varianceMatrix )
 {
   const mat4 M = modelViewProjMatrix * varianceMatrix;
 
-  const float dxm = -s;
-  const float dxp =  s;
-  const float dym = -s;
-  const float dyp =  s;
-  const float dzm = -s;
-  const float dzp =  s;
+  const float dxm = -1;
+  const float dxp =  1;
+  const float dym = -1;
+  const float dyp =  1;
+  const float dzm = -1;
+  const float dzp =  1;
 
-  vec4 v0 = M * ( p + vec4( dxm, dym, dzm, 0. ) );
-  vec4 v1 = M * ( p + vec4( dxp, dym, dzm, 0. ) );
-  vec4 v2 = M * ( p + vec4( dxp, dyp, dzm, 0. ) );
-  vec4 v3 = M * ( p + vec4( dxm, dyp, dzm, 0. ) );
-  vec4 v4 = M * ( p + vec4( dxm, dym, dzp, 0. ) );
-  vec4 v5 = M * ( p + vec4( dxp, dym, dzp, 0. ) );
-  vec4 v6 = M * ( p + vec4( dxp, dyp, dzp, 0. ) );
-  vec4 v7 = M * ( p + vec4( dxm, dyp, dzp, 0. ) );
+  vec4 v0 = M * vec4( dxm, dym, dzm, 1. );
+  vec4 v1 = M * vec4( dxp, dym, dzm, 1. );
+  vec4 v2 = M * vec4( dxp, dyp, dzm, 1. );
+  vec4 v3 = M * vec4( dxm, dyp, dzm, 1. );
+  vec4 v4 = M * vec4( dxm, dym, dzp, 1. );
+  vec4 v5 = M * vec4( dxp, dym, dzp, 1. );
+  vec4 v6 = M * vec4( dxp, dyp, dzp, 1. );
+  vec4 v7 = M * vec4( dxm, dyp, dzp, 1. );
 
-  g_cvh.n = 8;
   g_cvh.v[0] = v0.xy / v0.w;
   g_cvh.v[1] = v1.xy / v1.w;
   g_cvh.v[2] = v2.xy / v2.w;
@@ -146,10 +146,25 @@ ConvexHull2D quadricsProj2DConvexHull( const mat4 modelViewProjMatrix, const mat
   g_cvh.v[5] = v5.xy / v5.w;
   g_cvh.v[6] = v6.xy / v6.w;
   g_cvh.v[7] = v7.xy / v7.w;
+  g_cvh.n = 8;
 
   int first = cvh_bottom_right();
   cvh_swap(0,first);
   cvh_heap_sort();
 
+  g_cvh.n=2;
+  for(int i=2;i<8;i++)
+  {
+    if( rightOfOrAligned( g_cvh.v[g_cvh.n-2] , g_cvh.v[g_cvh.n-1] , g_cvh.v[i] ) )
+    {
+      g_cvh.v[g_cvh.n-1] = g_cvh.v[i];
+    }
+    else
+    {
+      g_cvh.v[g_cvh.n] = g_cvh.v[i];
+      ++ g_cvh.n;
+    }
+  }
+  
   return g_cvh;
 }
