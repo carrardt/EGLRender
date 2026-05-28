@@ -54,7 +54,7 @@ int main(int argc, char *argv[])
 
   std::vector<GLShaderTypeSource> shader_sources = {
     { GL_VERTEX_SHADER , R"EOF(
-    #version 430 core
+    #version 450 core
     #extension GL_ARB_shading_language_include : require
     #include <uniform/camera>
     layout (location = 0) in vec4 aPos;
@@ -62,31 +62,42 @@ int main(int argc, char *argv[])
     out float geomAngle;
     void main()
     {
-      mat4 mvp = projection * modelview;
-      gl_Position = mvp * aPos;
+      //mat4 mvp = projection * modelview;
+      gl_Position = aPos;
       geomAngle = aAngle;
     }
     )EOF" } ,
     { GL_GEOMETRY_SHADER , R"EOF(
-    #version 430 core
+    #version 450 core
+    #extension GL_ARB_shading_language_include : require
+    #include <uniform/camera>
+    #include <quadrics/convex_hull>
     layout (points) in;
-    layout (triangle_strip, max_vertices=3) out;
+    layout (line_strip, max_vertices=8) out;
     in float geomAngle[];
     out vec4 aColor;
     void main()
     {
       vec4 aPos = gl_in[0].gl_Position;
       aColor = vec4( clamp(aPos.x,0.1f,1.0f), clamp(aPos.y,0.1f,1.0f), clamp(aPos.x+aPos.y,0.1f,1.0f), 1.0f );
-      for(int i=0;i<3;i++)
+      mat4 mvp = projection * modelview;
+      mat4 varianceMatrix = { vec4(1,0,0,0) , vec4(0,1,0,0) , vec4(0,0,1,0) , vec4(0,0,0,1) };
+      ConvexHull2D hull = quadricsProj2DConvexHull( mvp, varianceMatrix , aPos , 0.1 );
+      float z = ( mvp * aPos ).z ;
+      float w = ( mvp * aPos ).w ;
+      gl_Position = vec4( hull.v[0].x , hull.v[0].y , z , w );
+      EmitVertex();
+      for(int i=1;i<hull.n;i++)
       {
-        gl_Position = gl_in[0].gl_Position + vec4( cos(geomAngle[0]+i*2*3.14159/3)*0.02 , sin(geomAngle[0]+i*2*3.14159/3)*0.02, 0.0 , 0.0 );
+        // cos(geomAngle[0]+i*2*3.14159/hull.n)*0.02 , sin(geomAngle[0]+i*2*3.14159/hull.n)*0.02
+        gl_Position = vec4( hull.v[i].x , hull.v[i].y , z , w );
         EmitVertex();
       }
       EndPrimitive();
     }
     )EOF" } ,
     { GL_FRAGMENT_SHADER , R"EOF(
-    #version 430 core
+    #version 450 core
     in vec4 aColor;
     out vec4 FragColor;
     void main()
