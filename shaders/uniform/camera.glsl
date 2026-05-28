@@ -4,6 +4,7 @@ uniform camera
 {
   mat4 modelview;
   mat4 projection;
+//  vec2 viewport;
   float aspect_ratio;
 };
 

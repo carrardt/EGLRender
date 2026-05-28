@@ -42,6 +42,7 @@ namespace EGLRender
     GLfloat m_aspect_ratio = 16.0f/9.0f; // = w/h
     GLfloat m_near = 0.1f;
     GLfloat m_far = 100.0f;
+    GLfloat m_viewport[2] = { 800 , 600 };
 
     GLfloat m_modelview_matrix[16] = { std::numeric_limits<GLfloat>::quiet_NaN(), };
     GLfloat m_projection_matrix[16] = { std::numeric_limits<GLfloat>::quiet_NaN(), };
@@ -51,6 +52,7 @@ namespace EGLRender
     GLint m_modelview_id = -1;
     GLint m_projection_id = -1;
     GLint m_aspect_ratio_id = -1;
+    GLint m_viewport_id = -1;
 
     void perspective(float fov, float ratio, float near, float far);
     void look_at( const vec3& eye, const vec3& center, const vec3& up = {0.0f,1.0f,0.0f} );

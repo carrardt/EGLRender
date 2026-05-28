@@ -54,7 +54,7 @@ int main(int argc, char *argv[])
 
   std::vector<GLShaderTypeSource> shader_sources = {
     { GL_VERTEX_SHADER , R"EOF(
-    #version 450 core
+    #version 460 core
     layout (location = 0) in vec4 aPos;
     layout (location = 1) in float aAngle;
     out float geomAngle;
@@ -65,23 +65,32 @@ int main(int argc, char *argv[])
     }
     )EOF" } ,
     { GL_GEOMETRY_SHADER , R"EOF(
-    #version 450 core
+    #version 460 core
     #extension GL_ARB_shading_language_include : require
     #include <uniform/camera>
     #include <quadrics/convex_hull>
+    #include <quadrics/shape>
     layout (points) in;
     layout (triangle_strip, max_vertices=12) out;
     in float geomAngle[];
-    out vec4 aColor;
+    out vec4 fColor;
+    out mat4 fQuadricsMatrix;
+    out vec4 fModelViewVarianceInverseR3;
     void main()
     {
-      vec4 aPos = gl_in[0].gl_Position;
-      aColor = vec4( clamp(aPos.x,0.1f,1.0f), clamp(aPos.y,0.1f,1.0f), clamp(aPos.x+aPos.y,0.1f,1.0f), 1.0f );
+      vec4 vPos = gl_in[0].gl_Position;
+      fColor = vec4( clamp(vPos.x,0.1f,1.0f), clamp(vPos.y,0.1f,1.0f), clamp(vPos.x+vPos.y,0.1f,1.0f), 1.0f );
       mat4 mvp = projection * modelview;
-      float s = 0.1;
-      mat4 varianceMatrix = { vec4(s,0,0,0) , vec4(0,s,0,0) , vec4(0,0,s,0) , aPos };
-      ConvexHull2D hull = quadricsProj2DConvexHull( mvp, varianceMatrix );
-      for(int i=2;i<hull.n;i++)
+      mat4 T = quadrics_anisotropic_variance_matrix( vPos , 0.1 );
+      mat4 D = quadrics_sphere_matrix();
+      mat4 Ti = inverse( T );
+      mat4 Tit = transpose( Ti );
+      mat4 modelviewInverse = inverse( modelview );
+      mat4 modelviewInverseTranspose = transpose( modelviewInverse );
+      fModelViewVarianceInverseR3 = transpose( Ti * modelviewInverse )[2];
+      fQuadricsMatrix = modelviewInverseTranspose * Tit * D * Ti * modelviewInverse;
+      ConvexHull2D hull = quadrics_2D_convex_hull( mvp, T );
+      for(int i=2;i<hull.n;++i)
       {
         gl_Position = vec4( hull.v[0].x , hull.v[0].y , hull.center.z , hull.center.w );
         EmitVertex();
@@ -94,17 +103,19 @@ int main(int argc, char *argv[])
     }
     )EOF" } ,
     { GL_FRAGMENT_SHADER , R"EOF(
-    #version 450 core
-    in vec4 aColor;
+    #version 460 core
+    in vec4 fColor;
+    in mat4 fQuadricsMatrix;
+    in vec4 fModelViewVarianceInverseR3;
     out vec4 FragColor;
     void main()
     {
-      FragColor = aColor;
+      FragColor = fColor;
     }
     )EOF" }
     };
 
-  const auto shader_prog_id = eglm.create_shader_program( "rotating_triangle" , shader_sources, { .m_enable_flags = { GL_PROGRAM_POINT_SIZE } } );
+  const auto shader_prog_id = eglm.create_shader_program( "rotating_triangle" , shader_sources, { .m_enable_flags = { GL_PROGRAM_POINT_SIZE , GL_DEPTH_TEST } } );
 
   auto & shader = eglm.shader_program(shader_prog_id);
 
@@ -120,7 +131,7 @@ int main(int argc, char *argv[])
 
   shader.use();
 
-  const int n_points = 4;
+  const int n_points = 64;
   const auto buf_id = eglm.create_vertex_buffers("vertex_attribs",n_points , { GL_FLOAT,4, GL_FLOAT,1 } );
 
   glColorMask (GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);

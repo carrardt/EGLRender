@@ -15,8 +15,8 @@ bool rightOf( const vec2 a, const vec2 b, const vec2 p ) { return vec2side(a,b,p
 
 struct ConvexHull2D
 {
-  vec2 v[8];
   vec4 center;
+  vec2 v[8];
   int n;
 };
 
@@ -61,11 +61,10 @@ bool cvh_order(const int i, const int j, const int d, const int s)
   }
   return false;
 }
-
-bool cvh_less         (int i,int j) { return cvh_order(i,j, 1,1); }
-bool cvh_less_equal   (int i,int j) { return cvh_order(i,j, 1,0); }
-bool cvh_greater      (int i,int j) { return cvh_order(i,j,-1,1); }
-bool cvh_greater_equal(int i,int j) { return cvh_order(i,j,-1,0); }
+bool cvh_less         (const int i,const int j) { return cvh_order(i,j, 1,1); }
+bool cvh_less_equal   (const int i,const int j) { return cvh_order(i,j, 1,0); }
+bool cvh_greater      (const int i,const int j) { return cvh_order(i,j,-1,1); }
+bool cvh_greater_equal(const int i,const int j) { return cvh_order(i,j,-1,0); }
 
 void cvh_sift_down(int root, const int bottom)
 {
@@ -118,7 +117,7 @@ void cvh_heap_sort()
 // Generic bounding box computation, works with any quadric type by splatting
 // in clip space the bounding box in parameter space;
 // in most cases you'll have to use a point scaling factor from 1.05 to 1.5
-ConvexHull2D quadricsProj2DConvexHull( const mat4 modelViewProjMatrix, const mat4 varianceMatrix )
+ConvexHull2D quadrics_2D_convex_hull( const mat4 modelViewProjMatrix, const mat4 varianceMatrix )
 {
   const mat4 M = modelViewProjMatrix * varianceMatrix;
 
@@ -129,14 +128,14 @@ ConvexHull2D quadricsProj2DConvexHull( const mat4 modelViewProjMatrix, const mat
   const float dzm = -1;
   const float dzp =  1;
 
-  vec4 v0 = M * vec4( dxm, dym, dzm, 1. );
-  vec4 v1 = M * vec4( dxp, dym, dzm, 1. );
-  vec4 v2 = M * vec4( dxp, dyp, dzm, 1. );
-  vec4 v3 = M * vec4( dxm, dyp, dzm, 1. );
-  vec4 v4 = M * vec4( dxm, dym, dzp, 1. );
-  vec4 v5 = M * vec4( dxp, dym, dzp, 1. );
-  vec4 v6 = M * vec4( dxp, dyp, dzp, 1. );
-  vec4 v7 = M * vec4( dxm, dyp, dzp, 1. );
+  const vec4 v0 = M * vec4( dxm, dym, dzm, 1. );
+  const vec4 v1 = M * vec4( dxp, dym, dzm, 1. );
+  const vec4 v2 = M * vec4( dxp, dyp, dzm, 1. );
+  const vec4 v3 = M * vec4( dxm, dyp, dzm, 1. );
+  const vec4 v4 = M * vec4( dxm, dym, dzp, 1. );
+  const vec4 v5 = M * vec4( dxp, dym, dzp, 1. );
+  const vec4 v6 = M * vec4( dxp, dyp, dzp, 1. );
+  const vec4 v7 = M * vec4( dxm, dyp, dzp, 1. );
 
   g_cvh.center =  M * vec4( 0, 0, 0, 1. );
   g_cvh.v[0] = v0.xy / v0.w;

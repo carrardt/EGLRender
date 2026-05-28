@@ -204,6 +204,11 @@ namespace EGLRender
       std::cerr << "EGL Error: variable '"<<aspectname<<"' not found in uniform block '"<<uniform_name<<"'" <<std::endl;
       std::abort();
     }
+    /*if(m_viewport_id==-1)
+    {
+      std::cerr << "EGL Error: variable '"<<aspectname<<"' not found in uniform block '"<<uniform_name<<"'" <<std::endl;
+      std::abort();
+    }*/
     std::cout << "attached to block #"<<m_block_id<<", modelview var #"<<m_modelview_id<<", projection var #"<<m_projection_id
               << ", aspect_ration var #"<<m_aspect_ratio_id << std::endl;
   }
