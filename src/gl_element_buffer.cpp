@@ -68,9 +68,8 @@ namespace EGLRender
     }
   }
 
-  void GLElementBuffer::draw(GLuint start, GLint count, GLenum draw_primitive)
+  void GLElementBuffer::draw(GLenum draw_primitive, GLuint start, GLint count)
   {
-    if( draw_primitive == GL_NONE ) draw_primitive = m_primitive_type;
     if(count == -1) count = m_size;
     use();
     glDrawElements( draw_primitive, count, GL_UNSIGNED_INT, reinterpret_cast<const void*>(start*sizeof(GLuint)) );

@@ -20,8 +20,6 @@ under the License.
 #pragma once
 
 #include <EGLRender/egl_platform.h>
-#include <vector>
-#include <span>
 
 namespace EGLRender
 {
@@ -42,7 +40,7 @@ namespace EGLRender
     void unmap_buffer();
 
     void use();
-    void draw( GLuint start=0, GLint count=-1, GLenum draw_primitive = GL_NONE);
+    void draw(GLenum draw_primitive, GLuint start=0, GLint count=-1);
 
     ~GLElementBuffer();
   };

@@ -1,4 +1,4 @@
-
+// suitable for spheres (rotation invariant objects)
 mat4 quadrics_anisotropic_variance_matrix(vec4 center, float radius)
 {
   mat4 T = { vec4( radius, 0., 0., 0. )
@@ -8,6 +8,8 @@ mat4 quadrics_anisotropic_variance_matrix(vec4 center, float radius)
   return T;
 }
 
+// suitable for object with an axis simetry (i.e. cones/cylinders): give axis direction and length
+// radius is the scaling factor orthogonal to axis (i.e. cone base radius or cylinder diameter)
 mat4 quadrics_oriented_variance_matrix(vec4 center, vec3 direction, float length, float radius)
 {
   vec3 W = normalize(direction);
@@ -40,3 +42,4 @@ mat4 quadrics_zcone_matrix()
 			0, 0, 0, 0,
 			0, 0, 0, -1 );
 }
+

@@ -75,7 +75,7 @@ int main(int argc, char *argv[])
     in float geomAngle[];
     out vec4 fColor;
     out mat4 fQuadricsMatrix;
-    out vec4 fModelViewVarianceInverseR3;
+    out mat4 fModelViewVarianceInverse;
     void main()
     {
       vec4 vPos = gl_in[0].gl_Position;
@@ -87,7 +87,7 @@ int main(int argc, char *argv[])
       mat4 Tit = transpose( Ti );
       mat4 modelviewInverse = inverse( modelview );
       mat4 modelviewInverseTranspose = transpose( modelviewInverse );
-      fModelViewVarianceInverseR3 = transpose( Ti * modelviewInverse )[2];
+      fModelViewVarianceInverse = Ti * modelviewInverse;
       fQuadricsMatrix = modelviewInverseTranspose * Tit * D * Ti * modelviewInverse;
       ConvexHull2D hull = quadrics_2D_convex_hull( mvp, T );
       for(int i=2;i<hull.n;++i)
@@ -106,7 +106,7 @@ int main(int argc, char *argv[])
     #version 460 core
     in vec4 fColor;
     in mat4 fQuadricsMatrix;
-    in vec4 fModelViewVarianceInverseR3;
+    in vec4 fModelViewVarianceInverse;
     out vec4 FragColor;
     void main()
     {
