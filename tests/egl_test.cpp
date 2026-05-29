@@ -35,6 +35,9 @@ int main(int argc, char *argv[])
 {
   using namespace EGLRender;
 
+  const int width = 800;
+  const int height = 600;
+
   EGLRenderSurfaceClass surf_type = EGLRenderSurfaceClass::PBUFFER;
   if( argc>1 )
   {
@@ -47,7 +50,7 @@ int main(int argc, char *argv[])
   EGLRenderManager eglm;
   eglm.init_platform( surf_type != EGLRenderSurfaceClass::PBUFFER );
 
-  eglm.create_surface( "main_window", surf_type, 800, 600 );
+  eglm.create_surface( "main_window", surf_type, width, height );
   eglm.surface("main_window").make_current();
 
   std::cout<<"OpenGL "<<gl_string_non_null(glGetString(GL_VERSION))<<std::endl;
@@ -79,9 +82,12 @@ int main(int argc, char *argv[])
     void main()
     {
       vec4 vPos = gl_in[0].gl_Position;
+      float vAngle = geomAngle[0];
       fColor = vec4( clamp(vPos.x,0.1f,1.0f), clamp(vPos.y,0.1f,1.0f), clamp(vPos.x+vPos.y,0.1f,1.0f), 1.0f );
       mat4 mvp = projection * modelview;
-      mat4 T = quadrics_anisotropic_variance_matrix( vPos , 0.1 );
+      mat4 rotz = { vec4(cos(vAngle*0.5),sin(vAngle*0.5),0,0) , vec4(-sin(vAngle*0.5),cos(vAngle*0.5),0,0) , vec4(0,0,1,0) , vec4(0,0,0,1) };
+      mat4 rotx = { vec4(1,0,0,0) , vec4(0,cos(vAngle*0.2),sin(vAngle*0.2),0) , vec4(0,-sin(vAngle*0.2),cos(vAngle*0.2),0) , vec4(0,0,0,1) };
+      mat4 T = quadrics_anisotropic_variance_matrix( vPos , 0.1 ) * rotz * rotx;
       mat4 D = quadrics_sphere_matrix();
       mat4 Ti = inverse( T );
       mat4 Tit = transpose( Ti );
@@ -104,13 +110,19 @@ int main(int argc, char *argv[])
     )EOF" } ,
     { GL_FRAGMENT_SHADER , R"EOF(
     #version 460 core
+    #extension GL_ARB_shading_language_include : require
+    #include <uniform/camera>
     in vec4 fColor;
     in mat4 fQuadricsMatrix;
-    in vec4 fModelViewVarianceInverse;
-    out vec4 FragColor;
+    in mat4 fModelViewVarianceInverse;
+    layout (location = 0) out vec4 FragColor; // first attached output buffer
+    layout (depth_any) out float gl_FragDepth; // free to set depth to arbitrary value
     void main()
     {
-      FragColor = fColor;
+      vec2 vp = viewport[0];
+      vec2 vp_rcp = viewport[1];
+      FragColor = vec4( gl_FragCoord.x*vp_rcp.x, gl_FragCoord.y*vp_rcp.y, gl_FragCoord.z, 1.0f ); // fColor;
+      gl_FragDepth = gl_FragCoord.z;
     }
     )EOF" }
     };
@@ -125,13 +137,14 @@ int main(int argc, char *argv[])
   auto camera_id = eglm.create_camera("pov");
   auto & camera = eglm.camera(camera_id);
   camera.look_at( {0,5,10} , {0,0,0} );
-  camera.perspective(60,800.0f/600.0f,0.1f,100.0f); // disable projection
+  camera.perspective(60,width*1.0f/height,0.1f,100.0f); // disable projection
+  camera.viewport(width,height);
   camera.attach_to_shader( eglm.shader_program_ptr(shader_prog_id), "camera", "modelview", "projection" );
   camera.update_uniform();
 
   shader.use();
 
-  const int n_points = 64;
+  const int n_points = 4;
   const auto buf_id = eglm.create_vertex_buffers("vertex_attribs",n_points , { GL_FLOAT,4, GL_FLOAT,1 } );
 
   glColorMask (GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);

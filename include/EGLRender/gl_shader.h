@@ -24,6 +24,7 @@ under the License.
 #include <iostream>
 #include <map>
 #include <span>
+#include <type_traits>
 
 namespace EGLRender
 {
@@ -94,8 +95,9 @@ namespace EGLRender
   {
     const GLUniformVariable & m_variable;
     void* m_mapped_ptr = nullptr;
-    void set(GLfloat value) const;
-    void set(const GLfloat* value, GLuint n) const;
+    
+    template<class T> void set(T value) const requires std::is_arithmetic_v<T>;
+    template<class T> void set(const T* value, GLuint n) const requires std::is_arithmetic_v<T>;
   };
 
   struct GLUniformBlock

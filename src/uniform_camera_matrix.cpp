@@ -132,6 +132,12 @@ namespace EGLRender
     mult_matrix( &tmat[0][0], &m[0][0] , m_modelview_matrix );
   }
 
+  void UniformCameraMatrix::viewport(int width, int height)
+  {
+    m_viewport[0] = width;
+    m_viewport[1] = height;
+  }
+
   void UniformCameraMatrix::perspective(float fov, float ratio, float near, float far)
   {
     m_fov = fov;
@@ -176,7 +182,8 @@ namespace EGLRender
                                             , std::string_view uniform_name
                                             , std::string_view mvmat_name
                                             , std::string_view projmat_name
-                                            , std::string_view aspectname )
+                                            , std::string_view aspectname
+                                            , std::string_view viewportname)
   {
     m_shader = prog;
     if( m_shader == nullptr ) return;
@@ -204,13 +211,14 @@ namespace EGLRender
       std::cerr << "EGL Error: variable '"<<aspectname<<"' not found in uniform block '"<<uniform_name<<"'" <<std::endl;
       std::abort();
     }
-    /*if(m_viewport_id==-1)
+    m_viewport_id = prog->uniform(m_block_id).variable_id(viewportname);
+    if(m_viewport_id==-1)
     {
-      std::cerr << "EGL Error: variable '"<<aspectname<<"' not found in uniform block '"<<uniform_name<<"'" <<std::endl;
+      std::cerr << "EGL Error: variable '"<<viewportname<<"' not found in uniform block '"<<uniform_name<<"'" <<std::endl;
       std::abort();
-    }*/
+    }
     std::cout << "attached to block #"<<m_block_id<<", modelview var #"<<m_modelview_id<<", projection var #"<<m_projection_id
-              << ", aspect_ration var #"<<m_aspect_ratio_id << std::endl;
+              << ", aspect_ratio var #"<<m_aspect_ratio_id<<", viewport var #"<<m_viewport_id << std::endl;
   }
 
   void UniformCameraMatrix::update_uniform()
@@ -224,6 +232,9 @@ namespace EGLRender
     m_shader->uniform(m_block_id).variable(m_modelview_id).set( m_modelview_matrix, 16 );
     m_shader->uniform(m_block_id).variable(m_projection_id).set( m_projection_matrix, 16 );
     m_shader->uniform(m_block_id).variable(m_aspect_ratio_id).set( m_aspect_ratio );
+    
+    GLfloat vp[4] = { 1.0f*m_viewport[0], 1.0f*m_viewport[1], 1.0f/m_viewport[0] , 1.0f/m_viewport[1] };
+    m_shader->uniform(m_block_id).variable(m_viewport_id).set( vp, 4 );
   }
 
   void UniformCameraMatrix::transform(const GLfloat in[4], GLfloat out[4])

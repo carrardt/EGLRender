@@ -144,6 +144,8 @@ namespace EGLRender
       for(int k= 0; k < variable_count; k++)
       {
         glGetActiveUniformName(prog, variables[k], blocks[b].m_variables[k].MAX_NAME_LEN , nullptr, blocks[b].m_variables[k].m_name );
+        auto aspos = std::string_view(blocks[b].m_variables[k].m_name).find("[0]");
+        if( aspos != std::string::npos ) { blocks[b].m_variables[k].m_name[aspos]='\0'; }
         glGetActiveUniformsiv(prog, 1, (GLuint *) &variables[k], GL_UNIFORM_TYPE, & blocks[b].m_variables[k].m_type );
         glGetActiveUniformsiv(prog, 1, (GLuint *) &variables[k], GL_UNIFORM_OFFSET, & blocks[b].m_variables[k].m_offset);
         glGetActiveUniformsiv(prog, 1, (GLuint *) &variables[k], GL_UNIFORM_SIZE, & blocks[b].m_variables[k].m_size);
@@ -221,11 +223,25 @@ namespace EGLRender
       , { GL_INT , 4 }
       , { GL_UNSIGNED_INT , 4 }
       , { GL_FLOAT , 4 }
+
+      , { GL_BOOL_VEC2 , 2*4 }
+      , { GL_INT_VEC2 , 2*4 }
+      , { GL_UNSIGNED_INT_VEC2 , 2*4 }
       , { GL_FLOAT_VEC2 , 2*4 }
+
+      , { GL_BOOL_VEC3 , 3*4 }
+      , { GL_INT_VEC3 , 3*4 }
+      , { GL_UNSIGNED_INT_VEC3 , 3*4 }
       , { GL_FLOAT_VEC3 , 3*4 }
+
+      , { GL_BOOL_VEC4 , 4*4 }
+      , { GL_INT_VEC4 , 4*4 }
+      , { GL_UNSIGNED_INT_VEC4 , 4*4 }
       , { GL_FLOAT_VEC4 , 4*4 }
+
       , { GL_FLOAT_MAT3 , 9*4 }
-      , { GL_FLOAT_MAT4 , 16*4 } };
+      , { GL_FLOAT_MAT4 , 16*4 }
+      };
     auto it = gl_size_map.find( m_type );
     if( it == gl_size_map.end() )
     {
@@ -272,7 +288,8 @@ namespace EGLRender
     }
   }
 
-  void GLUniformVariableAccessor::set(GLfloat value) const
+  template<class T>
+  void GLUniformVariableAccessor::set(T value) const requires std::is_arithmetic_v<T>
   {
     assert( m_mapped_ptr != nullptr );
     GLubyte* bptr = ((GLubyte*)m_mapped_ptr) + m_variable.m_offset;
@@ -284,14 +301,22 @@ namespace EGLRender
     {
       * (GLfloat*) bptr = value;
     }
+    else if( m_variable.m_type==GL_DOUBLE )
+    {
+      * (GLdouble*) bptr = value;
+    }
     else
     {
-      std::cerr<<"Cannot set a uniform of type "<<gl_enum_to_string(m_variable.m_type)<<" from GLfloat value"<<std::endl;
+      std::cerr<<"Cannot set a uniform of type "<<gl_enum_to_string(m_variable.m_type)<<std::endl;
       std::abort();
     }
   }
   
-  void GLUniformVariableAccessor::set(const GLfloat* value, GLuint n) const
+  template void GLUniformVariableAccessor::set<GLint>(GLint value) const;
+  template void GLUniformVariableAccessor::set<GLfloat>(GLfloat value) const;
+  
+  template<class T>
+  void GLUniformVariableAccessor::set(const T* value, GLuint n) const requires std::is_arithmetic_v<T>
   {
     if( n==1 )
     {
@@ -299,18 +324,71 @@ namespace EGLRender
     }
     else
     {
-      if( (m_variable.m_type==GL_FLOAT_VEC2 && n==2*m_variable.m_size)
-       || (m_variable.m_type==GL_FLOAT_VEC3 && n==3*m_variable.m_size)
-       || (m_variable.m_type==GL_FLOAT_VEC4 && n==4*m_variable.m_size)
-       || (m_variable.m_type==GL_FLOAT_MAT3 && n==9*m_variable.m_size)
-       || (m_variable.m_type==GL_FLOAT_MAT4 && n==16*m_variable.m_size) )
+      bool is_integer = true;
+      // bool is_double = false; // ont supported yet
+      switch(m_variable.m_type)
       {
-        int vecsize = n / m_variable.m_size;
+        case GL_FLOAT:
+        case GL_FLOAT_VEC2:
+        case GL_FLOAT_VEC3:
+        case GL_FLOAT_VEC4:
+        case GL_FLOAT_MAT2:
+        case GL_FLOAT_MAT3:
+        case GL_FLOAT_MAT4:
+          is_integer=false;
+          //is_double=false;
+          break;
+      }
+
+      int vecsize = 1;
+      switch(m_variable.m_type)
+      {
+        case GL_FLOAT:
+        case GL_INT:
+        case GL_UNSIGNED_INT:
+        case GL_BOOL:
+          vecsize = 1;
+          break;
+        case GL_FLOAT_VEC2:
+        case GL_INT_VEC2:
+        case GL_UNSIGNED_INT_VEC2:
+        case GL_BOOL_VEC2:
+          vecsize = 2;
+          break;
+        case GL_FLOAT_VEC3:
+        case GL_INT_VEC3:
+        case GL_UNSIGNED_INT_VEC3:
+        case GL_BOOL_VEC3:
+          vecsize = 3;
+          break;
+        case GL_FLOAT_VEC4:
+        case GL_INT_VEC4:
+        case GL_UNSIGNED_INT_VEC4:
+        case GL_BOOL_VEC4:
+          vecsize = 4;
+          break;
+        case GL_FLOAT_MAT2: 
+          vecsize = 4;
+          break;
+        case GL_FLOAT_MAT3: 
+          vecsize = 9;
+          break;
+        case GL_FLOAT_MAT4: 
+          vecsize = 16;
+          break;
+      }
+      if( n == vecsize * m_variable.m_size )
+      {
         for(int ai=0;ai<m_variable.m_size;ai++)
         {
           GLubyte* bptr = ((GLubyte*)m_mapped_ptr) + m_variable.m_offset + m_variable.m_stride * ai;
-          GLfloat * fptr = (GLfloat*) bptr;          
-          for(int vi=0;vi<vecsize;vi++) fptr[vi] = value[ai*vecsize+vi];
+          GLfloat * fptr = (GLfloat*) bptr;
+          GLint * iptr = (GLint*) bptr;
+          for(int vi=0;vi<vecsize;vi++)
+          {
+            if(is_integer) iptr[vi] = value[ai*vecsize+vi];
+            else fptr[vi] = value[ai*vecsize+vi];
+          }
         }
       }
       else
@@ -320,5 +398,8 @@ namespace EGLRender
       }
     }
   }
+
+  template void GLUniformVariableAccessor::set<GLint>(const GLint* value, GLuint n) const;
+  template void GLUniformVariableAccessor::set<GLfloat>(const GLfloat* value, GLuint n) const;
 
 }
