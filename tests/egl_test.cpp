@@ -74,26 +74,28 @@ int main(int argc, char *argv[])
     #include <quadrics/convex_hull>
     #include <quadrics/shape>
     layout (points) in;
-    layout (triangle_strip, max_vertices=12) out;
+    layout (triangle_strip, max_vertices=18) out;
     in float geomAngle[];
     out vec4 fColor;
     out mat4 fQuadricsMatrix;
     out mat4 fModelViewVarianceInverse;
+    out mat4 fProjectionInverse;
     void main()
     {
       vec4 vPos = gl_in[0].gl_Position;
       float vAngle = geomAngle[0];
-      fColor = vec4( clamp(vPos.x,0.1f,1.0f), clamp(vPos.y,0.1f,1.0f), clamp(vPos.x+vPos.y,0.1f,1.0f), 1.0f );
+      fColor = vec4( clamp(vPos.x,0.0f,1.0f), clamp(vPos.y,0.0f,1.0f), clamp(vPos.x+vPos.y,0.0f,1.0f), 1.0f );
       mat4 mvp = projection * modelview;
       mat4 rotz = { vec4(cos(vAngle*0.5),sin(vAngle*0.5),0,0) , vec4(-sin(vAngle*0.5),cos(vAngle*0.5),0,0) , vec4(0,0,1,0) , vec4(0,0,0,1) };
       mat4 rotx = { vec4(1,0,0,0) , vec4(0,cos(vAngle*0.2),sin(vAngle*0.2),0) , vec4(0,-sin(vAngle*0.2),cos(vAngle*0.2),0) , vec4(0,0,0,1) };
       mat4 T = quadrics_anisotropic_variance_matrix( vPos , 0.1 ) * rotz * rotx;
-      mat4 D = quadrics_sphere_matrix();
+      mat4 D = quadrics_sphere_matrix()*2;
       mat4 Ti = inverse( T );
       mat4 Tit = transpose( Ti );
       mat4 modelviewInverse = inverse( modelview );
       mat4 modelviewInverseTranspose = transpose( modelviewInverse );
       fModelViewVarianceInverse = Ti * modelviewInverse;
+      fProjectionInverse = inverse( projection );
       fQuadricsMatrix = modelviewInverseTranspose * Tit * D * Ti * modelviewInverse;
       ConvexHull2D hull = quadrics_2D_convex_hull( mvp, T );
       for(int i=2;i<hull.n;++i)
@@ -112,16 +114,39 @@ int main(int argc, char *argv[])
     #version 460 core
     #extension GL_ARB_shading_language_include : require
     #include <uniform/camera>
+    #include <quadrics/raytracing>
     in vec4 fColor;
     in mat4 fQuadricsMatrix;
     in mat4 fModelViewVarianceInverse;
+    in mat4 fProjectionInverse;
     layout (location = 0) out vec4 FragColor; // first attached output buffer
     layout (depth_any) out float gl_FragDepth; // free to set depth to arbitrary value
     void main()
     {
+/*
       vec2 vp = viewport[0];
       vec2 vp_rcp = viewport[1];
-      FragColor = vec4( gl_FragCoord.x*vp_rcp.x, gl_FragCoord.y*vp_rcp.y, gl_FragCoord.z, 1.0f ); // fColor;
+      vec3 fc = gl_FragCoord.xyz;
+      fc.xy /= vp;
+      fc *= 2.0;
+      fc -= 1.0;
+      vec4 p = fProjectionInverse * vec4(fc, 1.);
+      vec3 P = rayQuadricsIntersection( fQuadricsMatrix , fModelViewVarianceInverse , vec3(0,0,0), p.xyz / p.w );
+      vec3 N = quadricsSurfaceNormal( fQuadricsMatrix , P );
+      vec4 projP = projection * vec4( P, 1. );
+      gl_FragDepth = 0.5 * (projP.z / projP.w + 1.0);
+      vec4 color;
+      vec3 ambientColor = vec3(0.1,0.1,0.1);
+      vec3 diffuseColor = fColor.xyz;
+      vec3 specularColor = vec3(1,1,1);
+      vec3 lightPosition = vec3(1,1,1); 
+      float d = max( dot( N , normalize(lightPosition) ) , 0 );
+      float s = pow( d , 3 );
+      color.xyz = diffuseColor.xyz * d + specularColor * s + ambientColor;
+      color.w = fColor.w;
+      FragColor = color;
+*/
+      FragColor = fColor;
       gl_FragDepth = gl_FragCoord.z;
     }
     )EOF" }

@@ -1,12 +1,9 @@
-// constants
-#define FLAT_SHADE_POINT_SIZE 4.0f //if point size < 1 use flat shading
-#define MAX_LIGHTS 1
 
 // test only z component, as the only primitives exteinding over the box are z-aligned cylinders and cones
 bool pointInUnitBox( mat4 modelViewVarianceInverse, vec3 p )
 {
-	const vec4 pu = dot( modelViewVarianceInverse , vec4( p, 1. ) );
-	return ( pu.x >= -1.01f ) && ( pu.x <= 1.01f ) && ( pu.y >= -1.01f ) && ( pu.y <= 1.01f ) ( pu.z >= -1.01f ) && ( pu.z <= 1.01f );
+	const vec4 pu = modelViewVarianceInverse * vec4( p, 1. ) ;
+	return ( pu.x >= -1.01f ) && ( pu.x <= 1.01f ) && ( pu.y >= -1.01f ) && ( pu.y <= 1.01f ) && ( pu.z >= -1.01f ) && ( pu.z <= 1.01f );
 }
 
 vec3 rayQuadricsIntersection(mat4 Q, mat4 modelViewVarianceInverse, const vec3 rayOrigin, const vec3 rayDirection)
@@ -43,11 +40,11 @@ vec3 rayQuadricsIntersection(mat4 Q, mat4 modelViewVarianceInverse, const vec3 r
 		return vec3(0,0,0);
 	}
 
-	float d = sqrt(delta);
+	float eq_d = sqrt(delta);
 	A = 1. / A;
 	A *= 0.5;
-	float t2 = A * (-B + d);
-	float t1 = A * (-B - d);
+	float t2 = A * (-B + eq_d);
+	float t1 = A * (-B - eq_d);
 
 	vec3 P1 = P + D * min( t1, t2 );
 	if( pointInUnitBox( modelViewVarianceInverse, P1 ) )
@@ -64,6 +61,7 @@ vec3 rayQuadricsIntersection(mat4 Q, mat4 modelViewVarianceInverse, const vec3 r
 	discard;
 	return vec3(0,0,0);
 }
+
 
 // compute unit normal from gradient
 vec3 quadricsSurfaceNormal(mat4 Q, vec3 P)
@@ -86,9 +84,10 @@ vec3 quadricsSurfaceNormal(mat4 Q, vec3 P)
 	i = Q[ 3 ][ 2 ];
 	j = Q[ 3 ][ 3 ];
 
-	return normalize(vec3(dot(vec4(a, d, e, 1.), vec4(P, g)), // should multiply by 2 for actual gradient
-			dot(vec4(d, b, f, 1.), vec4(P, h)), // should multiply by 2 for actual gradient
-			dot(vec4(e, f, c, 1.), vec4(P, i)) // should multiply by 2 for actual gradient
-			));
+  vec3 gradient = vec3( dot(vec4(a, d, e, 1.), vec4(P, g)) *2
+                      , dot(vec4(d, b, f, 1.), vec4(P, h)) *2
+                      , dot(vec4(e, f, c, 1.), vec4(P, i)) *2 );
+
+	return normalize( gradient );
 }
 
