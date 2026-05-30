@@ -28,6 +28,15 @@ under the License.
 
 namespace EGLRender
 {
+  struct UniformCameraBinding
+  {
+    std::shared_ptr<GLShaderProgram> m_shader = nullptr; // shader to write matrices to
+    GLint m_block_id = -1;
+    GLint m_modelview_id = -1;
+    GLint m_projection_id = -1;
+    GLint m_aspect_ratio_id = -1;
+    GLint m_viewport_id = -1;
+  };
   
   struct UniformCameraMatrix
   {    
@@ -47,12 +56,7 @@ namespace EGLRender
     GLfloat m_modelview_matrix[16] = { std::numeric_limits<GLfloat>::quiet_NaN(), };
     GLfloat m_projection_matrix[16] = { std::numeric_limits<GLfloat>::quiet_NaN(), };
 
-    std::shared_ptr<GLShaderProgram> m_shader = nullptr; // shader to write matrices to
-    GLint m_block_id = -1;
-    GLint m_modelview_id = -1;
-    GLint m_projection_id = -1;
-    GLint m_aspect_ratio_id = -1;
-    GLint m_viewport_id = -1;
+    std::map< std::shared_ptr<GLShaderProgram> , UniformCameraBinding > m_shader_binding;
 
     void viewport(int width, int height);
     void perspective(float fov, float ratio, float near, float far);
@@ -61,12 +65,14 @@ namespace EGLRender
     void move( GLfloat side, GLfloat up, GLfloat forward );
 
     // default names are those defined in include header "uniform/camera"
-    void attach_to_shader( std::shared_ptr<GLShaderProgram> prog
+    void attach_shader( std::shared_ptr<GLShaderProgram> prog
                          , std::string_view block = "camera"
                          , std::string_view mvmat = "modelview"
                          , std::string_view projmat = "projection"
                          , std::string_view aspectname = "aspect_ratio"
                          , std::string_view viewportname = "viewport" );
+
+    void detach_shader( std::shared_ptr<GLShaderProgram> prog );
                          
     void update_uniform();
 

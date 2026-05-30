@@ -178,47 +178,53 @@ namespace EGLRender
     update_modelview();
    }
   
-  void UniformCameraMatrix::attach_to_shader( std::shared_ptr<GLShaderProgram> prog
+  void UniformCameraMatrix::attach_shader( std::shared_ptr<GLShaderProgram> prog
                                             , std::string_view uniform_name
                                             , std::string_view mvmat_name
                                             , std::string_view projmat_name
                                             , std::string_view aspectname
                                             , std::string_view viewportname)
   {
-    m_shader = prog;
-    if( m_shader == nullptr ) return;
-    m_block_id = prog->uniform_id(uniform_name);
-    if(m_block_id==-1)
+    if( prog == nullptr ) return;
+    auto & binding = m_shader_binding[prog];
+
+    binding.m_block_id = prog->uniform_id(uniform_name);
+    if(binding.m_block_id==-1)
     {
       std::cerr << "EGL Error: uniform block '"<<uniform_name<<"' not found in shader #"<<prog->m_shader_program <<std::endl;
       std::abort();
     }
-    m_modelview_id = prog->uniform(m_block_id).variable_id(mvmat_name);
-    if(m_modelview_id==-1)
+    binding.m_modelview_id = prog->uniform(binding.m_block_id).variable_id(mvmat_name);
+    if(binding.m_modelview_id==-1)
     {
       std::cerr << "EGL Error: variable '"<<mvmat_name<<"' not found in uniform block '"<<uniform_name<<"'" <<std::endl;
       std::abort();
     }
-    m_projection_id = prog->uniform(m_block_id).variable_id(projmat_name);
-    if(m_projection_id==-1)
+    binding.m_projection_id = prog->uniform(binding.m_block_id).variable_id(projmat_name);
+    if(binding.m_projection_id==-1)
     {
       std::cerr << "EGL Error: variable '"<<projmat_name<<"' not found in uniform block '"<<uniform_name<<"'" <<std::endl;
       std::abort();
     }
-    m_aspect_ratio_id = prog->uniform(m_block_id).variable_id(aspectname);
-    if(m_aspect_ratio_id==-1)
+    binding.m_aspect_ratio_id = prog->uniform(binding.m_block_id).variable_id(aspectname);
+    if(binding.m_aspect_ratio_id==-1)
     {
       std::cerr << "EGL Error: variable '"<<aspectname<<"' not found in uniform block '"<<uniform_name<<"'" <<std::endl;
       std::abort();
     }
-    m_viewport_id = prog->uniform(m_block_id).variable_id(viewportname);
-    if(m_viewport_id==-1)
+    binding.m_viewport_id = prog->uniform(binding.m_block_id).variable_id(viewportname);
+    if(binding.m_viewport_id==-1)
     {
       std::cerr << "EGL Error: variable '"<<viewportname<<"' not found in uniform block '"<<uniform_name<<"'" <<std::endl;
       std::abort();
     }
-    std::cout << "attached to block #"<<m_block_id<<", modelview var #"<<m_modelview_id<<", projection var #"<<m_projection_id
-              << ", aspect_ratio var #"<<m_aspect_ratio_id<<", viewport var #"<<m_viewport_id << std::endl;
+    std::cout << "attached to block #"<<binding.m_block_id<<", modelview var #"<<binding.m_modelview_id<<", projection var #"<<binding.m_projection_id
+              << ", aspect_ratio var #"<<binding.m_aspect_ratio_id<<", viewport var #"<<binding.m_viewport_id << std::endl;
+  }
+
+  void UniformCameraMatrix::detach_shader( std::shared_ptr<GLShaderProgram> prog)
+  {
+    m_shader_binding.erase( prog );
   }
 
   void UniformCameraMatrix::update_uniform()
@@ -229,12 +235,16 @@ namespace EGLRender
     if( std::isnan(m_modelview_matrix[0]) ) update_modelview();
     if( std::isnan(m_projection_matrix[0]) ) update_projection();
 
-    m_shader->uniform(m_block_id).variable(m_modelview_id).set( m_modelview_matrix, 16 );
-    m_shader->uniform(m_block_id).variable(m_projection_id).set( m_projection_matrix, 16 );
-    m_shader->uniform(m_block_id).variable(m_aspect_ratio_id).set( m_aspect_ratio );
-    
     GLfloat vp[4] = { 1.0f*m_viewport[0], 1.0f*m_viewport[1], 1.0f/m_viewport[0] , 1.0f/m_viewport[1] };
-    m_shader->uniform(m_block_id).variable(m_viewport_id).set( vp, 4 );
+    for( auto & p : m_shader_binding )
+    {
+      auto & shader = p.first;
+      auto & binding = p.second;
+      shader->uniform(binding.m_block_id).variable(binding.m_modelview_id).set( m_modelview_matrix, 16 );
+      shader->uniform(binding.m_block_id).variable(binding.m_projection_id).set( m_projection_matrix, 16 );
+      shader->uniform(binding.m_block_id).variable(binding.m_aspect_ratio_id).set( m_aspect_ratio );      
+      shader->uniform(binding.m_block_id).variable(binding.m_viewport_id).set( vp, 4 );
+    }
   }
 
   void UniformCameraMatrix::transform(const GLfloat in[4], GLfloat out[4])

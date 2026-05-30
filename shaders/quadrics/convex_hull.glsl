@@ -140,6 +140,8 @@ ConvexHull2D quadrics_2D_convex_hull( const mat4 modelViewProjMatrix, const mat4
   const vec4 v7 = M * vec4( dxm, dyp, dzp, 1. );
 
   g_cvh.center =  M * vec4( 0, 0, 0, 1. );
+  g_cvh.center.xyz /= g_cvh.center.w;
+  g_cvh.center.w = 1.0;
   g_cvh.v[0] = v0.xy / v0.w;
   g_cvh.v[1] = v1.xy / v1.w;
   g_cvh.v[2] = v2.xy / v2.w;
@@ -169,4 +171,30 @@ ConvexHull2D quadrics_2D_convex_hull( const mat4 modelViewProjMatrix, const mat4
   }
   
   return g_cvh;
+}
+
+void cvh_draw_triangles(ConvexHull2D cvh)
+{
+  for(int i=2;i<cvh.n;++i)
+  {
+    gl_Position = vec4( cvh.v[0].x , cvh.v[0].y , cvh.center.z , cvh.center.w );
+    EmitVertex();
+    gl_Position = vec4( cvh.v[i-1].x , cvh.v[i-1].y , cvh.center.z , cvh.center.w );
+    EmitVertex();
+    gl_Position = vec4( cvh.v[i].x , cvh.v[i].y , cvh.center.z , cvh.center.w );
+    EmitVertex();
+    EndPrimitive();
+  }
+}
+
+void cvh_draw_lines(ConvexHull2D cvh)
+{
+  for(int i=0;i<cvh.n;++i)
+  {
+    gl_Position = vec4( cvh.v[i].x , cvh.v[i].y , cvh.center.z , cvh.center.w );
+    EmitVertex();
+  }
+  gl_Position = vec4( cvh.v[0].x , cvh.v[0].y , cvh.center.z , cvh.center.w );
+  EmitVertex();
+  EndPrimitive();
 }

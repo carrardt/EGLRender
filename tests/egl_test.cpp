@@ -55,7 +55,73 @@ int main(int argc, char *argv[])
 
   std::cout<<"OpenGL "<<gl_string_non_null(glGetString(GL_VERSION))<<std::endl;
 
-  std::vector<GLShaderTypeSource> shader_sources = {
+  std::vector<GLShaderTypeSource> pass1_shader_sources = {
+    { GL_VERTEX_SHADER , R"EOF(
+    #version 460 core
+    layout (location = 0) in vec4 aPos;
+    layout (location = 1) in float aAngle;
+    out float geomAngle;
+    void main()
+    {
+      gl_Position = aPos;
+      geomAngle = aAngle;
+    }
+    )EOF" } ,
+    { GL_GEOMETRY_SHADER , R"EOF(
+    #version 460 core
+    #extension GL_ARB_shading_language_include : require
+    #include <uniform/camera>
+    #include <quadrics/convex_hull>
+    #include <quadrics/shape>
+    layout (points) in;
+    layout (line_strip, max_vertices=CVH_LINE_STRIP_MAX_VERTICES) out;
+    in float geomAngle[];
+    out vec4 fColor;
+    out mat4 fQuadricsMatrix;
+    out mat4 fModelViewVarianceInverse;
+    out mat4 fProjectionInverse;
+    void main()
+    {
+      vec4 vPos = gl_in[0].gl_Position;
+      float vAngle = geomAngle[0];
+      fColor = vec4( clamp(vPos.x,0.0f,1.0f), clamp(vPos.y,0.0f,1.0f), clamp(vPos.x+vPos.y,0.0f,1.0f), 1.0f );
+      mat4 mvp = projection * modelview;
+      mat4 rotz = { vec4(cos(vAngle*0.5),sin(vAngle*0.5),0,0) , vec4(-sin(vAngle*0.5),cos(vAngle*0.5),0,0) , vec4(0,0,1,0) , vec4(0,0,0,1) };
+      mat4 rotx = { vec4(1,0,0,0) , vec4(0,cos(vAngle*0.2),sin(vAngle*0.2),0) , vec4(0,-sin(vAngle*0.2),cos(vAngle*0.2),0) , vec4(0,0,0,1) };
+      mat4 T = quadrics_anisotropic_variance_matrix( vPos , 0.1 ) * rotz * rotx;
+      mat4 D = quadrics_sphere_matrix();
+      mat4 Ti = inverse( T );
+      mat4 Tit = transpose( Ti );
+      mat4 modelviewInverse = inverse( modelview );
+      mat4 modelviewInverseTranspose = transpose( modelviewInverse );
+      fModelViewVarianceInverse = Ti * modelviewInverse;
+      fProjectionInverse = inverse( projection );
+      fQuadricsMatrix = modelviewInverseTranspose * Tit * D * Ti * modelviewInverse;
+      ConvexHull2D hull = quadrics_2D_convex_hull( mvp, T );
+      cvh_draw_lines( hull );
+    }
+    )EOF" } ,
+    { GL_FRAGMENT_SHADER , R"EOF(
+    #version 460 core
+    #extension GL_ARB_shading_language_include : require
+    #include <uniform/camera>
+    #include <quadrics/raytracing>
+    in vec4 fColor;
+    in mat4 fQuadricsMatrix;
+    in mat4 fModelViewVarianceInverse;
+    in mat4 fProjectionInverse;
+    layout (location = 0) out vec4 FragColor; // first attached output buffer
+    layout (depth_any) out float gl_FragDepth; // free to set depth to arbitrary value
+    void main()
+    {
+      FragColor = fColor;
+      gl_FragDepth = gl_FragCoord.z;
+    }
+    )EOF" }
+    };
+
+
+  std::vector<GLShaderTypeSource> pass2_shader_sources = {
     { GL_VERTEX_SHADER , R"EOF(
     #version 460 core
     layout (location = 0) in vec4 aPos;
@@ -89,7 +155,7 @@ int main(int argc, char *argv[])
       mat4 rotz = { vec4(cos(vAngle*0.5),sin(vAngle*0.5),0,0) , vec4(-sin(vAngle*0.5),cos(vAngle*0.5),0,0) , vec4(0,0,1,0) , vec4(0,0,0,1) };
       mat4 rotx = { vec4(1,0,0,0) , vec4(0,cos(vAngle*0.2),sin(vAngle*0.2),0) , vec4(0,-sin(vAngle*0.2),cos(vAngle*0.2),0) , vec4(0,0,0,1) };
       mat4 T = quadrics_anisotropic_variance_matrix( vPos , 0.1 ) * rotz * rotx;
-      mat4 D = quadrics_sphere_matrix()*2;
+      mat4 D = quadrics_sphere_matrix();
       mat4 Ti = inverse( T );
       mat4 Tit = transpose( Ti );
       mat4 modelviewInverse = inverse( modelview );
@@ -98,16 +164,7 @@ int main(int argc, char *argv[])
       fProjectionInverse = inverse( projection );
       fQuadricsMatrix = modelviewInverseTranspose * Tit * D * Ti * modelviewInverse;
       ConvexHull2D hull = quadrics_2D_convex_hull( mvp, T );
-      for(int i=2;i<hull.n;++i)
-      {
-        gl_Position = vec4( hull.v[0].x , hull.v[0].y , hull.center.z , hull.center.w );
-        EmitVertex();
-        gl_Position = vec4( hull.v[i-1].x , hull.v[i-1].y , hull.center.z , hull.center.w );
-        EmitVertex();
-        gl_Position = vec4( hull.v[i].x , hull.v[i].y , hull.center.z , hull.center.w );
-        EmitVertex();
-        EndPrimitive();
-      }
+      cvh_draw_triangles( hull );
     }
     )EOF" } ,
     { GL_FRAGMENT_SHADER , R"EOF(
@@ -123,7 +180,6 @@ int main(int argc, char *argv[])
     layout (depth_any) out float gl_FragDepth; // free to set depth to arbitrary value
     void main()
     {
-/*
       vec2 vp = viewport[0];
       vec2 vp_rcp = viewport[1];
       vec3 fc = gl_FragCoord.xyz;
@@ -145,29 +201,27 @@ int main(int argc, char *argv[])
       color.xyz = diffuseColor.xyz * d + specularColor * s + ambientColor;
       color.w = fColor.w;
       FragColor = color;
-*/
-      FragColor = fColor;
-      gl_FragDepth = gl_FragCoord.z;
     }
     )EOF" }
     };
 
-  const auto shader_prog_id = eglm.create_shader_program( "rotating_triangle" , shader_sources, { .m_enable_flags = { GL_PROGRAM_POINT_SIZE , GL_DEPTH_TEST } } );
+  const auto pass1_shader_id = eglm.create_shader_program( "quadrics_outline" , pass1_shader_sources, { .m_enable_flags = { GL_PROGRAM_POINT_SIZE , GL_DEPTH_TEST } } );
+  auto & shader1 = eglm.shader_program(pass1_shader_id);
+  
+  const auto pass2_shader_id = eglm.create_shader_program( "quadrics_raytrace" , pass2_shader_sources, { .m_enable_flags = { GL_PROGRAM_POINT_SIZE , GL_DEPTH_TEST } } );
+  auto & shader2 = eglm.shader_program(pass2_shader_id);
 
-  auto & shader = eglm.shader_program(shader_prog_id);
-
-  std::cout << "Pipeline config :" << std::boolalpha << std::endl;
-  shader.m_pipeline_config.to_stream( std::cout );    
+  std::cout << "Shader1 Pipeline config :" << std::boolalpha << std::endl;
+  shader1.m_pipeline_config.to_stream( std::cout );    
 
   auto camera_id = eglm.create_camera("pov");
   auto & camera = eglm.camera(camera_id);
   camera.look_at( {0,5,10} , {0,0,0} );
   camera.perspective(60,width*1.0f/height,0.1f,100.0f); // disable projection
   camera.viewport(width,height);
-  camera.attach_to_shader( eglm.shader_program_ptr(shader_prog_id), "camera", "modelview", "projection" );
+  camera.attach_shader( eglm.shader_program_ptr(pass1_shader_id) );
+  camera.attach_shader( eglm.shader_program_ptr(pass2_shader_id) );
   camera.update_uniform();
-
-  shader.use();
 
   const int n_points = 4;
   const auto buf_id = eglm.create_vertex_buffers("vertex_attribs",n_points , { GL_FLOAT,4, GL_FLOAT,1 } );
@@ -209,6 +263,10 @@ int main(int argc, char *argv[])
     // equivalent to
     // eglm.vertex_buffer("vertex_attribs").use();
 
+    shader1.use();
+    glDrawArrays(GL_POINTS, 0, n_points);
+
+    shader2.use();
     glDrawArrays(GL_POINTS, 0, n_points);
 
     size_t pixel_data_sz = width * height * 4;
@@ -342,6 +400,11 @@ int main(int argc, char *argv[])
       glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT|GL_STENCIL_BUFFER_BIT);
 
       glvbos.use();
+
+      shader1.use();
+      glDrawArrays(GL_POINTS, 0, n_points);
+
+      shader2.use();
       glDrawArrays(GL_POINTS, 0, n_points);
 
       ren_surf.swap_buffers();
