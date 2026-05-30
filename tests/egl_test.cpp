@@ -74,7 +74,7 @@ int main(int argc, char *argv[])
     #include <quadrics/convex_hull>
     #include <quadrics/shape>
     layout (points) in;
-    layout (triangle_strip, max_vertices=18) out;
+    layout (triangle_strip, max_vertices=CVH_TRIANGLE_STRIP_MAX_VERTICES) out;
     in float geomAngle[];
     out vec4 fColor;
     out mat4 fQuadricsMatrix;

@@ -1,3 +1,5 @@
+#define CVH_TRIANGLE_STRIP_MAX_VERTICES 16
+#define CVH_LINE_STRIP_MAX_VERTICES 8
 
 // on what side of vector ab does the point p lies ?
 // 1.0 => left, 0.0 => aligned , -1.0 => right

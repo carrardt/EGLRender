@@ -20,6 +20,10 @@ under the License.
 #include <EGLRender/egl_surface.h>
 #include <EGLRender/egl_error.h>
 #include <iostream>
+#include <cstdlib>
+#include <filesystem>
+#include <fstream>
+#include <sstream>
 
 #include "gl_named_strings.hxx"
 
@@ -127,6 +131,44 @@ namespace EGLRender
         platform_add_named_string(GL_NAMED_STRINGS[i][0],GL_NAMED_STRINGS[i][1]);
         ++i;
       }
+      std::string gl_named_strings_directory;
+#     ifdef GL_NAMED_STRINGS_DIRECTORY
+      gl_named_strings_directory = GL_NAMED_STRINGS_DIRECTORY ;
+#     endif
+      const char * env_gl_named_strings_directory = std::getenv("GL_NAMED_STRINGS_DIRECTORY");
+      if( env_gl_named_strings_directory != nullptr ) gl_named_strings_directory = env_gl_named_strings_directory;
+
+      if( !gl_named_strings_directory.empty() && std::filesystem::status(gl_named_strings_directory).type() == std::filesystem::file_type::directory )
+      {
+        for (auto it{std::filesystem::directory_iterator(gl_named_strings_directory)}; it != std::filesystem::directory_iterator(); ++it)
+        {
+          //const auto ftype = std::filesystem::status(it->path()).type();
+          if( it->is_regular_file() )
+          {
+            const auto filepath = it->path().filename().replace_extension();
+#           ifndef NDEBUG
+            std::cout << "update named string " << filepath << " from file"<< std::endl;
+#           endif
+            platform_add_named_string( filepath.string() , (std::ostringstream()<<std::ifstream(it->path()).rdbuf()).str() );
+          }
+          else if( it->is_directory() )
+          {
+            const auto dirpath = it->path().filename();
+            for (auto subit{std::filesystem::directory_iterator(it->path())}; subit != std::filesystem::directory_iterator(); ++subit)
+            {
+              if( std::filesystem::status(subit->path()).type() == std::filesystem::file_type::regular )
+              {
+                const auto filepath = dirpath / subit->path().filename().replace_extension();
+#               ifndef NDEBUG
+                std::cout << "update named string " << filepath << " from file"<< std::endl;
+#               endif
+                platform_add_named_string( filepath.string() , (std::ostringstream()<<std::ifstream(subit->path()).rdbuf()).str() );
+              }
+            }
+          }
+        }  
+      }
+      
     }
   }
 

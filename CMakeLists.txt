@@ -94,6 +94,10 @@ foreach(SHADER ${SHADER_FILES})
 endforeach()
 file(APPEND ${GL_NAMED_STRINGS_FILE} "{nullptr,nullptr} };\n } // end of namespace EGLRender\n")
 
+# also install shaders into a directory for dynamic update/upgrades of shaders
+install(DIRECTORY ${PROJECT_SOURCE_DIR}/shaders DESTINATION ${CMAKE_INSTALL_PREFIX})
+list(APPEND EGLRENDER_DEFINITIONS GL_NAMED_STRINGS_DIRECTORY="${CMAKE_INSTALL_PREFIX}/shaders")
+
 add_library(EGLRender SHARED
   src/egl_render_manager.cpp
   src/egl_error.cpp
