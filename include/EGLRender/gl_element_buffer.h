@@ -27,7 +27,6 @@ namespace EGLRender
   struct GLElementBuffer
   {
     GLuint m_size = 0;
-    GLenum m_primitive_type = GL_TRIANGLES;
     GLuint m_restart_index = 0;
     GLuint m_element_buffer = gen_buffer_id( m_size );
 

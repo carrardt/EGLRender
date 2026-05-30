@@ -1,5 +1,6 @@
 #define CVH_TRIANGLE_STRIP_MAX_VERTICES 16
 #define CVH_LINE_STRIP_MAX_VERTICES 8
+#define BOX_LINE_STRIP_MAX_VERTICES 16
 
 // on what side of vector ab does the point p lies ?
 // 1.0 => left, 0.0 => aligned , -1.0 => right
@@ -115,6 +116,38 @@ void cvh_heap_sort()
   }
 }
 
+void quadrics_draw_box_lines( const mat4 modelViewProjMatrix, const mat4 varianceMatrix )
+{
+  const mat4 M = modelViewProjMatrix * varianceMatrix;
+
+  vec4 v[8];
+  for(int i=0;i<8;i++)
+  {
+    v[i] = M * vec4( (i%2)*2-1 , ((i/2)%2)*2-1 , ((i/4)%2)*2-1 , 1. );
+  }
+
+  gl_Position = v[0]; EmitVertex();
+  gl_Position = v[1]; EmitVertex();
+  gl_Position = v[3]; EmitVertex();
+  gl_Position = v[2]; EmitVertex();
+  gl_Position = v[6]; EmitVertex();
+  gl_Position = v[7]; EmitVertex();
+  gl_Position = v[5]; EmitVertex();
+  gl_Position = v[4]; EmitVertex();
+  EndPrimitive();
+  gl_Position = v[2]; EmitVertex();
+  gl_Position = v[0]; EmitVertex();
+  gl_Position = v[4]; EmitVertex();
+  gl_Position = v[6]; EmitVertex();
+  EndPrimitive();
+  gl_Position = v[3]; EmitVertex();
+  gl_Position = v[7]; EmitVertex();
+  EndPrimitive();
+  gl_Position = v[1]; EmitVertex();
+  gl_Position = v[5]; EmitVertex();
+  EndPrimitive();
+}
+
 //------------------------------------------------------------------------------
 // Generic bounding box computation, works with any quadric type by splatting
 // in clip space the bounding box in parameter space;
@@ -123,33 +156,15 @@ ConvexHull2D quadrics_2D_convex_hull( const mat4 modelViewProjMatrix, const mat4
 {
   const mat4 M = modelViewProjMatrix * varianceMatrix;
 
-  const float dxm = -1;
-  const float dxp =  1;
-  const float dym = -1;
-  const float dyp =  1;
-  const float dzm = -1;
-  const float dzp =  1;
-
-  const vec4 v0 = M * vec4( dxm, dym, dzm, 1. );
-  const vec4 v1 = M * vec4( dxp, dym, dzm, 1. );
-  const vec4 v2 = M * vec4( dxp, dyp, dzm, 1. );
-  const vec4 v3 = M * vec4( dxm, dyp, dzm, 1. );
-  const vec4 v4 = M * vec4( dxm, dym, dzp, 1. );
-  const vec4 v5 = M * vec4( dxp, dym, dzp, 1. );
-  const vec4 v6 = M * vec4( dxp, dyp, dzp, 1. );
-  const vec4 v7 = M * vec4( dxm, dyp, dzp, 1. );
-
   g_cvh.center =  M * vec4( 0, 0, 0, 1. );
   g_cvh.center.xyz /= g_cvh.center.w;
   g_cvh.center.w = 1.0;
-  g_cvh.v[0] = v0.xy / v0.w;
-  g_cvh.v[1] = v1.xy / v1.w;
-  g_cvh.v[2] = v2.xy / v2.w;
-  g_cvh.v[3] = v3.xy / v3.w;
-  g_cvh.v[4] = v4.xy / v4.w;
-  g_cvh.v[5] = v5.xy / v5.w;
-  g_cvh.v[6] = v6.xy / v6.w;
-  g_cvh.v[7] = v7.xy / v7.w;
+
+  for(int i=0;i<8;i++)
+  {
+    vec4 v = M * vec4( (i%2)*2-1 , ((i/2)%2)*2-1 , ((i/4)%2)*2-1 , 1. );
+    g_cvh.v[i] = v.xy / v.w ;
+  }
   g_cvh.n = 8;
 
   int first = cvh_bottom_right();

@@ -103,6 +103,30 @@ namespace EGLRender
     return create_vertex_buffers( name, n_vertices, std::span<const GLint>(attrib_formats.data(),attrib_formats.size()) );
   }
 
+  int EGLRenderManager::create_element_buffer( std::string_view name, GLuint n_elements, GLuint restart_index )
+  {
+    auto it = m_elbuf_names.find(name.data());
+    if( it != m_elbuf_names.end() )
+    {
+      if( n_elements != m_elbuffers[it->second]->size() )
+      {
+        m_elbuffers[it->second]->resize( n_elements );
+      }
+      m_elbuffers[it->second]->m_restart_index = restart_index;
+      return it->second;
+    }
+    else
+    {
+      const size_t elbuffer_id = m_elbuffers.size();
+      m_elbuf_names[name.data()] = elbuffer_id;
+      m_elbuffers.emplace_back( new GLElementBuffer { n_elements, restart_index } );
+#     ifndef NDEBUG
+      std::cout << "EGL : vertex buffer '"<<name<<"' @"<<elbuffer_id<<std::endl;
+#     endif
+      return elbuffer_id;
+    }
+  }
+
   EGLRenderer& EGLRenderManager::renderer()
   {
     return *m_egl;
@@ -217,5 +241,30 @@ namespace EGLRender
     }
     return vertex_buffers(it->second);
   }
+
+  int EGLRenderManager::element_buffer_id(std::string_view name)
+  {
+    auto it = m_elbuf_names.find(name.data());
+    if( it != m_elbuf_names.end() ) return it->second;
+    else return -1;
+  }
+
+  GLElementBuffer& EGLRenderManager::element_buffer(int id)
+  {
+    return * m_elbuffers[id];
+  }
+
+  GLElementBuffer& EGLRenderManager::element_buffer(std::string_view name)
+  {
+    auto it = m_elbuf_names.find(name.data());
+    if( it == m_elbuf_names.end() )
+    {
+      std::cerr << "EGL Error: element buffer named "<<name<<" not found"<<std::endl;
+      std::abort();
+    }
+    return element_buffer(it->second);
+  }
+
+
 
 }

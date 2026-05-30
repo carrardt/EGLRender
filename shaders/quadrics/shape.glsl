@@ -34,7 +34,7 @@ mat4 quadrics_sphere_matrix()
 			0, 0, 0, -1 );
 }
 
-mat4 quadrics_zcone_matrix()
+mat4 quadrics_zcylinder_matrix()
 {
 	return mat4(
 			1, 0, 0, 0,
@@ -43,3 +43,18 @@ mat4 quadrics_zcone_matrix()
 			0, 0, 0, -1 );
 }
 
+mat4 quadrics_zcone_matrix()
+{
+	return mat4(
+			1, 0, 0, 0,
+			0, 1, 0, 0,
+			0, 0, -1, 0,
+			0, 0, 0, 0 );
+}
+
+mat4 quadrics_shape_transform( mat4 Q , mat4 T )
+{
+  mat4 Ti = inverse(T);
+  mat4 Tit = transpose(Ti);
+  return Tit * Q * Ti;
+}

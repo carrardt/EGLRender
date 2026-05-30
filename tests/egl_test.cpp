@@ -74,12 +74,10 @@ int main(int argc, char *argv[])
     #include <quadrics/convex_hull>
     #include <quadrics/shape>
     layout (points) in;
-    layout (line_strip, max_vertices=CVH_LINE_STRIP_MAX_VERTICES) out;
+    layout (line_strip, max_vertices=BOX_LINE_STRIP_MAX_VERTICES) out;
+//    layout (line_strip, max_vertices=CVH_LINE_STRIP_MAX_VERTICES) out;
     in float geomAngle[];
     out vec4 fColor;
-    out mat4 fQuadricsMatrix;
-    out mat4 fModelViewVarianceInverse;
-    out mat4 fProjectionInverse;
     void main()
     {
       vec4 vPos = gl_in[0].gl_Position;
@@ -89,16 +87,9 @@ int main(int argc, char *argv[])
       mat4 rotz = { vec4(cos(vAngle*0.5),sin(vAngle*0.5),0,0) , vec4(-sin(vAngle*0.5),cos(vAngle*0.5),0,0) , vec4(0,0,1,0) , vec4(0,0,0,1) };
       mat4 rotx = { vec4(1,0,0,0) , vec4(0,cos(vAngle*0.2),sin(vAngle*0.2),0) , vec4(0,-sin(vAngle*0.2),cos(vAngle*0.2),0) , vec4(0,0,0,1) };
       mat4 T = quadrics_anisotropic_variance_matrix( vPos , 0.1 ) * rotz * rotx;
-      mat4 D = quadrics_sphere_matrix();
-      mat4 Ti = inverse( T );
-      mat4 Tit = transpose( Ti );
-      mat4 modelviewInverse = inverse( modelview );
-      mat4 modelviewInverseTranspose = transpose( modelviewInverse );
-      fModelViewVarianceInverse = Ti * modelviewInverse;
-      fProjectionInverse = inverse( projection );
-      fQuadricsMatrix = modelviewInverseTranspose * Tit * D * Ti * modelviewInverse;
-      ConvexHull2D hull = quadrics_2D_convex_hull( mvp, T );
-      cvh_draw_lines( hull );
+//      ConvexHull2D hull = quadrics_2D_convex_hull( mvp, T );
+//      cvh_draw_lines( hull );
+      quadrics_draw_box_lines( mvp, T );
     }
     )EOF" } ,
     { GL_FRAGMENT_SHADER , R"EOF(
@@ -107,15 +98,10 @@ int main(int argc, char *argv[])
     #include <uniform/camera>
     #include <quadrics/raytracing>
     in vec4 fColor;
-    in mat4 fQuadricsMatrix;
-    in mat4 fModelViewVarianceInverse;
-    in mat4 fProjectionInverse;
     layout (location = 0) out vec4 FragColor; // first attached output buffer
-    layout (depth_any) out float gl_FragDepth; // free to set depth to arbitrary value
     void main()
     {
       FragColor = fColor;
-      gl_FragDepth = gl_FragCoord.z;
     }
     )EOF" }
     };
@@ -156,6 +142,9 @@ int main(int argc, char *argv[])
       mat4 rotx = { vec4(1,0,0,0) , vec4(0,cos(vAngle*0.2),sin(vAngle*0.2),0) , vec4(0,-sin(vAngle*0.2),cos(vAngle*0.2),0) , vec4(0,0,0,1) };
       mat4 T = quadrics_anisotropic_variance_matrix( vPos , 0.1 ) * rotz * rotx;
       mat4 D = quadrics_sphere_matrix();
+//      mat4 D = quadrics_zcone_matrix();
+//      mat4 DT = mat4( vec4(0.5,0,0,0) , vec4(0,0.5,0,0) , vec4(0,0,1,0) , vec4(0,0,1,1) );
+//      D = quadrics_shape_transform( D , DT );
       mat4 Ti = inverse( T );
       mat4 Tit = transpose( Ti );
       mat4 modelviewInverse = inverse( modelview );
@@ -214,6 +203,9 @@ int main(int argc, char *argv[])
   std::cout << "Shader1 Pipeline config :" << std::boolalpha << std::endl;
   shader1.m_pipeline_config.to_stream( std::cout );    
 
+  std::cout << "Shader2 Pipeline config :" << std::boolalpha << std::endl;
+  shader2.m_pipeline_config.to_stream( std::cout );    
+
   auto camera_id = eglm.create_camera("pov");
   auto & camera = eglm.camera(camera_id);
   camera.look_at( {0,5,10} , {0,0,0} );
@@ -223,7 +215,13 @@ int main(int argc, char *argv[])
   camera.attach_shader( eglm.shader_program_ptr(pass2_shader_id) );
   camera.update_uniform();
 
-  const int n_points = 4;
+  const int n_points = 64;
+  const auto elbuf_id = eglm.create_element_buffer("half_elements",n_points/2);
+  auto & half_elements_buffer = eglm.element_buffer(elbuf_id);
+  auto * el_buf_ptr = half_elements_buffer.map_buffer_write_only();
+  for(int i=0;i<n_points;i+=2) { el_buf_ptr[i/2] = i; }
+  half_elements_buffer.unmap_buffer();
+  
   const auto buf_id = eglm.create_vertex_buffers("vertex_attribs",n_points , { GL_FLOAT,4, GL_FLOAT,1 } );
 
   glColorMask (GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
@@ -294,6 +292,7 @@ int main(int argc, char *argv[])
       int mouse_last_y = -1;
       int should_exit = false;
       int motion = true;
+      int half_elements = false;
       int left_drag = false;
       int mid_drag = false;
       int right_drag = false;
@@ -305,6 +304,7 @@ int main(int argc, char *argv[])
     {
        if( f ) f(key);
        if( key == 32 ) uistate.motion = ! uistate.motion;
+       if( key == 104 ) uistate.half_elements = ! uistate.half_elements;
        if( key == 65307 ) uistate.should_exit = true;
     };
     ren_surf.m_event_handler.on_button_press = [&uistate,f=ren_surf.m_event_handler.on_button_press](int state, int b, int x,int y)
@@ -402,10 +402,12 @@ int main(int argc, char *argv[])
       glvbos.use();
 
       shader1.use();
-      glDrawArrays(GL_POINTS, 0, n_points);
-
+      if( uistate.half_elements ) half_elements_buffer.draw(GL_POINTS);
+      else glDrawArrays(GL_POINTS, 0, n_points);
+      
       shader2.use();
-      glDrawArrays(GL_POINTS, 0, n_points);
+      if( uistate.half_elements ) half_elements_buffer.draw(GL_POINTS);
+      else glDrawArrays(GL_POINTS, 0, n_points);
 
       ren_surf.swap_buffers();
       if( uistate.motion ) ++i;
