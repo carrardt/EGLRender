@@ -88,10 +88,10 @@ int main(int argc, char *argv[])
       float vAngle = geomAngle[0];
       fColor = vec4( clamp(vPos.x,0.0f,1.0f), clamp(vPos.y,0.0f,1.0f), clamp(vPos.x+vPos.y,0.0f,1.0f), 1.0f );
       mat4 mvp = projection[0] * modelview[0];
-//      mat4 rotz = { vec4(cos(vAngle*0.5),sin(vAngle*0.5),0,0) , vec4(-sin(vAngle*0.5),cos(vAngle*0.5),0,0) , vec4(0,0,1,0) , vec4(0,0,0,1) };
-//      mat4 rotx = { vec4(1,0,0,0) , vec4(0,cos(vAngle*0.2),sin(vAngle*0.2),0) , vec4(0,-sin(vAngle*0.2),cos(vAngle*0.2),0) , vec4(0,0,0,1) };
-//      mat4 T = quadrics_anisotropic_variance_matrix( vPos , 0.1 ) * rotz * rotx;
-      mat4 T = quadrics_oriented_variance_matrix( vPos , vec3(cos(vAngle*0.5),sin(vAngle*0.5)*-sin(vAngle*0.2),cos(vAngle*0.2)) , 0.5 , 0.02 );
+      mat4 rotz = { vec4(cos(vAngle*0.5),sin(vAngle*0.5),0,0) , vec4(-sin(vAngle*0.5),cos(vAngle*0.5),0,0) , vec4(0,0,1,0) , vec4(0,0,0,1) };
+      mat4 rotx = { vec4(1,0,0,0) , vec4(0,cos(vAngle*0.2),sin(vAngle*0.2),0) , vec4(0,-sin(vAngle*0.2),cos(vAngle*0.2),0) , vec4(0,0,0,1) };
+      mat4 T = quadrics_anisotropic_variance_matrix( vPos , 0.1 ) * rotz * rotx;
+//      mat4 T = quadrics_oriented_variance_matrix( vPos , vec3(cos(vAngle*0.5),sin(vAngle*0.5)*-sin(vAngle*0.2),cos(vAngle*0.2)) , 0.5 , 0.02 );
       #ifdef CVH_DRAW_OUTLINE_ONLY
       ConvexHull2D hull = quadrics_2D_convex_hull( mvp, T );
       cvh_draw_lines( hull );
@@ -145,14 +145,12 @@ int main(int argc, char *argv[])
       float vAngle = geomAngle[0];
       fColor = vec4( clamp(vPos.x,0.0f,1.0f), clamp(vPos.y,0.0f,1.0f), clamp(vPos.x+vPos.y,0.0f,1.0f), 1.0f );
       mat4 mvp = projection[0] * modelview[0];
-      //mat4 rotz = { vec4(cos(vAngle*0.5),sin(vAngle*0.5),0,0) , vec4(-sin(vAngle*0.5),cos(vAngle*0.5),0,0) , vec4(0,0,1,0) , vec4(0,0,0,1) };
-      //mat4 rotx = { vec4(1,0,0,0) , vec4(0,cos(vAngle*0.2),sin(vAngle*0.2),0) , vec4(0,-sin(vAngle*0.2),cos(vAngle*0.2),0) , vec4(0,0,0,1) };
-      //mat4 T = quadrics_anisotropic_variance_matrix( vPos , 0.1 ) * rotz * rotx;
-      //mat4 D = quadrics_sphere_matrix();
-      mat4 T = quadrics_oriented_variance_matrix( vPos , vec3(cos(vAngle*0.5),sin(vAngle*0.5)*-sin(vAngle*0.2),cos(vAngle*0.2)) , 0.5 , 0.02 );
-      mat4 D = quadrics_zcylinder_matrix();
-//      mat4 DT = mat4( vec4(0.5,0,0,0) , vec4(0,0.5,0,0) , vec4(0,0,1,0) , vec4(0,0,1,1) );
-//      D = quadrics_shape_transform( D , DT );
+      mat4 rotz = { vec4(cos(vAngle*0.5),sin(vAngle*0.5),0,0) , vec4(-sin(vAngle*0.5),cos(vAngle*0.5),0,0) , vec4(0,0,1,0) , vec4(0,0,0,1) };
+      mat4 rotx = { vec4(1,0,0,0) , vec4(0,cos(vAngle*0.2),sin(vAngle*0.2),0) , vec4(0,-sin(vAngle*0.2),cos(vAngle*0.2),0) , vec4(0,0,0,1) };
+      mat4 T = quadrics_anisotropic_variance_matrix( vPos , 0.1 ) * rotz * rotx;
+      mat4 D = quadrics_sphere_matrix();
+//      mat4 T = quadrics_oriented_variance_matrix( vPos , vec3(cos(vAngle*0.5),sin(vAngle*0.5)*-sin(vAngle*0.2),cos(vAngle*0.2)) , 0.5 , 0.02 );
+//      mat4 D = quadrics_zcylinder_matrix();
       mat4 Ti = inverse( T );
       mat4 Tit = transpose( Ti );
       mat4 modelviewInverse = inverse( modelview[0] );
