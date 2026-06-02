@@ -165,7 +165,13 @@ namespace EGLRender
   
   std::shared_ptr<GLShaderProgram> EGLRenderManager::shader_program_ptr(int id)
   {
+    if( id<0 || id>=m_programs.size() ) return nullptr;
     return m_programs[id];
+  }
+
+  std::shared_ptr<GLShaderProgram> EGLRenderManager::shader_program_ptr(std::string_view name)
+  {
+    return shader_program_ptr( shader_program_id(name) );
   }
 
   int EGLRenderManager::shader_program_id(std::string_view name)
@@ -265,6 +271,16 @@ namespace EGLRender
     return element_buffer(it->second);
   }
 
+  std::shared_ptr<GLElementBuffer> EGLRenderManager::element_buffer_ptr(int id)
+  {
+    if( id<0 || id>=m_elbuffers.size() ) return nullptr;
+    return m_elbuffers[id];
+  }
+  
+  std::shared_ptr<GLElementBuffer> EGLRenderManager::element_buffer_ptr(std::string_view name)
+  {
+    return element_buffer_ptr( element_buffer_id(name) );
+  }
 
 
 }

@@ -88,6 +88,31 @@ namespace EGLRender
     }
   }
 
+  static inline bool matrix_inverse(const GLfloat m[16], GLfloat invOut[16])
+  {
+    const GLfloat inv[16] = {
+         m[5] * m[10] * m[15] - m[5] * m[11] * m[14] - m[9] * m[6] * m[15] + m[9] * m[7] * m[14] + m[13] * m[6] * m[11] - m[13] * m[7] * m[10]
+      , -m[1] * m[10] * m[15] + m[1] * m[11] * m[14] + m[9] * m[2] * m[15] - m[9] * m[3] * m[14] - m[13] * m[2] * m[11] + m[13] * m[3] * m[10]
+      ,  m[1] * m[ 6] * m[15] - m[1] * m[ 7] * m[14] - m[5] * m[2] * m[15] + m[5] * m[3] * m[14] + m[13] * m[2] * m[ 7] - m[13] * m[3] * m[ 6]
+      , -m[1] * m[ 6] * m[11] + m[1] * m[ 7] * m[10] + m[5] * m[2] * m[11] - m[5] * m[3] * m[10] - m[ 9] * m[2] * m[ 7] + m[ 9] * m[3] * m[ 6]
+      , -m[4] * m[10] * m[15] + m[4] * m[11] * m[14] + m[8] * m[6] * m[15] - m[8] * m[7] * m[14] - m[12] * m[6] * m[11] + m[12] * m[7] * m[10]
+      ,  m[0] * m[10] * m[15] - m[0] * m[11] * m[14] - m[8] * m[2] * m[15] + m[8] * m[3] * m[14] + m[12] * m[2] * m[11] - m[12] * m[3] * m[10]
+      , -m[0] * m[ 6] * m[15] + m[0] * m[ 7] * m[14] + m[4] * m[2] * m[15] - m[4] * m[3] * m[14] - m[12] * m[2] * m[ 7] + m[12] * m[3] * m[ 6]
+      ,  m[0] * m[ 6] * m[11] - m[0] * m[ 7] * m[10] - m[4] * m[2] * m[11] + m[4] * m[3] * m[10] + m[ 8] * m[2] * m[ 7] - m[ 8] * m[3] * m[ 6]
+      ,  m[4] * m[ 9] * m[15] - m[4] * m[11] * m[13] - m[8] * m[5] * m[15] + m[8] * m[7] * m[13] + m[12] * m[5] * m[11] - m[12] * m[7] * m[ 9]
+      , -m[0] * m[ 9] * m[15] + m[0] * m[11] * m[13] + m[8] * m[1] * m[15] - m[8] * m[3] * m[13] - m[12] * m[1] * m[11] + m[12] * m[3] * m[ 9]
+      ,  m[0] * m[ 5] * m[15] - m[0] * m[ 7] * m[13] - m[4] * m[1] * m[15] + m[4] * m[3] * m[13] + m[12] * m[1] * m[ 7] - m[12] * m[3] * m[ 5]
+      , -m[0] * m[ 5] * m[11] + m[0] * m[ 7] * m[ 9] + m[4] * m[1] * m[11] - m[4] * m[3] * m[ 9] - m[ 8] * m[1] * m[ 7] + m[ 8] * m[3] * m[ 5]
+      , -m[4] * m[ 9] * m[14] + m[4] * m[10] * m[13] + m[8] * m[5] * m[14] - m[8] * m[6] * m[13] - m[12] * m[5] * m[10] + m[12] * m[6] * m[ 9]
+      ,  m[0] * m[ 9] * m[14] - m[0] * m[10] * m[13] - m[8] * m[1] * m[14] + m[8] * m[2] * m[13] + m[12] * m[1] * m[10] - m[12] * m[2] * m[ 9]
+      , -m[0] * m[ 5] * m[14] + m[0] * m[ 6] * m[13] + m[4] * m[1] * m[14] - m[4] * m[2] * m[13] - m[12] * m[1] * m[ 6] + m[12] * m[2] * m[ 5]
+      ,  m[0] * m[ 5] * m[10] - m[0] * m[ 6] * m[ 9] - m[4] * m[1] * m[10] + m[4] * m[2] * m[ 9] + m[ 8] * m[1] * m[ 6] - m[ 8] * m[2] * m[ 5] };
+    const double det = m[0] * inv[0] + m[1] * inv[4] + m[2] * inv[8] + m[3] * inv[12];
+    if (det == 0) return false;
+    for (unsigned int i = 0; i < 16; i++) invOut[i] = inv[i] / det;
+    return true;
+  }
+
   static inline GLfloat norm2(GLfloat v[3])
   {
     return v[0]*v[0] + v[1]*v[1] + v[2]*v[2];
@@ -236,12 +261,21 @@ namespace EGLRender
     if( std::isnan(m_projection_matrix[0]) ) update_projection();
 
     GLfloat vp[4] = { 1.0f*m_viewport[0], 1.0f*m_viewport[1], 1.0f/m_viewport[0] , 1.0f/m_viewport[1] };
+    
+    GLfloat mv_mvinv[16*2];
+    for(int i=0;i<16;i++) { mv_mvinv[i]=m_modelview_matrix[i]; mv_mvinv[i+16]=0.0f; }
+    matrix_inverse(m_modelview_matrix,mv_mvinv+16);
+
+    GLfloat proj_projinv[16*2];
+    for(int i=0;i<16;i++) { proj_projinv[i]=m_projection_matrix[i]; proj_projinv[i+16]=0.0f; }
+    matrix_inverse(m_projection_matrix,proj_projinv+16);
+    
     for( auto & p : m_shader_binding )
     {
       auto & shader = p.first;
       auto & binding = p.second;
-      shader->uniform(binding.m_block_id).variable(binding.m_modelview_id).set( m_modelview_matrix, 16 );
-      shader->uniform(binding.m_block_id).variable(binding.m_projection_id).set( m_projection_matrix, 16 );
+      shader->uniform(binding.m_block_id).variable(binding.m_modelview_id).set( mv_mvinv, 32 );
+      shader->uniform(binding.m_block_id).variable(binding.m_projection_id).set( proj_projinv, 32 );
       shader->uniform(binding.m_block_id).variable(binding.m_aspect_ratio_id).set( m_aspect_ratio );      
       shader->uniform(binding.m_block_id).variable(binding.m_viewport_id).set( vp, 4 );
     }

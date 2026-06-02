@@ -73,9 +73,13 @@ int main(int argc, char *argv[])
     #include <uniform/camera>
     #include <quadrics/convex_hull>
     #include <quadrics/shape>
+    //#define CVH_DRAW_OUTLINE_ONLY 1
     layout (points) in;
+    #ifdef CVH_DRAW_OUTLINE_ONLY
+    layout (line_strip, max_vertices=CVH_LINE_STRIP_MAX_VERTICES) out;
+    #else
     layout (line_strip, max_vertices=BOX_LINE_STRIP_MAX_VERTICES) out;
-//    layout (line_strip, max_vertices=CVH_LINE_STRIP_MAX_VERTICES) out;
+    #endif
     in float geomAngle[];
     out vec4 fColor;
     void main()
@@ -83,13 +87,17 @@ int main(int argc, char *argv[])
       vec4 vPos = gl_in[0].gl_Position;
       float vAngle = geomAngle[0];
       fColor = vec4( clamp(vPos.x,0.0f,1.0f), clamp(vPos.y,0.0f,1.0f), clamp(vPos.x+vPos.y,0.0f,1.0f), 1.0f );
-      mat4 mvp = projection * modelview;
-      mat4 rotz = { vec4(cos(vAngle*0.5),sin(vAngle*0.5),0,0) , vec4(-sin(vAngle*0.5),cos(vAngle*0.5),0,0) , vec4(0,0,1,0) , vec4(0,0,0,1) };
-      mat4 rotx = { vec4(1,0,0,0) , vec4(0,cos(vAngle*0.2),sin(vAngle*0.2),0) , vec4(0,-sin(vAngle*0.2),cos(vAngle*0.2),0) , vec4(0,0,0,1) };
-      mat4 T = quadrics_anisotropic_variance_matrix( vPos , 0.1 ) * rotz * rotx;
-//      ConvexHull2D hull = quadrics_2D_convex_hull( mvp, T );
-//      cvh_draw_lines( hull );
+      mat4 mvp = projection[0] * modelview[0];
+//      mat4 rotz = { vec4(cos(vAngle*0.5),sin(vAngle*0.5),0,0) , vec4(-sin(vAngle*0.5),cos(vAngle*0.5),0,0) , vec4(0,0,1,0) , vec4(0,0,0,1) };
+//      mat4 rotx = { vec4(1,0,0,0) , vec4(0,cos(vAngle*0.2),sin(vAngle*0.2),0) , vec4(0,-sin(vAngle*0.2),cos(vAngle*0.2),0) , vec4(0,0,0,1) };
+//      mat4 T = quadrics_anisotropic_variance_matrix( vPos , 0.1 ) * rotz * rotx;
+      mat4 T = quadrics_oriented_variance_matrix( vPos , vec3(cos(vAngle*0.5),sin(vAngle*0.5)*-sin(vAngle*0.2),cos(vAngle*0.2)) , 0.5 , 0.02 );
+      #ifdef CVH_DRAW_OUTLINE_ONLY
+      ConvexHull2D hull = quadrics_2D_convex_hull( mvp, T );
+      cvh_draw_lines( hull );
+      #else
       quadrics_draw_box_lines( mvp, T );
+      #endif
     }
     )EOF" } ,
     { GL_FRAGMENT_SHADER , R"EOF(
@@ -131,26 +139,25 @@ int main(int argc, char *argv[])
     out vec4 fColor;
     out mat4 fQuadricsMatrix;
     out mat4 fModelViewVarianceInverse;
-    out mat4 fProjectionInverse;
     void main()
     {
       vec4 vPos = gl_in[0].gl_Position;
       float vAngle = geomAngle[0];
       fColor = vec4( clamp(vPos.x,0.0f,1.0f), clamp(vPos.y,0.0f,1.0f), clamp(vPos.x+vPos.y,0.0f,1.0f), 1.0f );
-      mat4 mvp = projection * modelview;
-      mat4 rotz = { vec4(cos(vAngle*0.5),sin(vAngle*0.5),0,0) , vec4(-sin(vAngle*0.5),cos(vAngle*0.5),0,0) , vec4(0,0,1,0) , vec4(0,0,0,1) };
-      mat4 rotx = { vec4(1,0,0,0) , vec4(0,cos(vAngle*0.2),sin(vAngle*0.2),0) , vec4(0,-sin(vAngle*0.2),cos(vAngle*0.2),0) , vec4(0,0,0,1) };
-      mat4 T = quadrics_anisotropic_variance_matrix( vPos , 0.1 ) * rotz * rotx;
-      mat4 D = quadrics_sphere_matrix();
-//      mat4 D = quadrics_zcone_matrix();
+      mat4 mvp = projection[0] * modelview[0];
+      //mat4 rotz = { vec4(cos(vAngle*0.5),sin(vAngle*0.5),0,0) , vec4(-sin(vAngle*0.5),cos(vAngle*0.5),0,0) , vec4(0,0,1,0) , vec4(0,0,0,1) };
+      //mat4 rotx = { vec4(1,0,0,0) , vec4(0,cos(vAngle*0.2),sin(vAngle*0.2),0) , vec4(0,-sin(vAngle*0.2),cos(vAngle*0.2),0) , vec4(0,0,0,1) };
+      //mat4 T = quadrics_anisotropic_variance_matrix( vPos , 0.1 ) * rotz * rotx;
+      //mat4 D = quadrics_sphere_matrix();
+      mat4 T = quadrics_oriented_variance_matrix( vPos , vec3(cos(vAngle*0.5),sin(vAngle*0.5)*-sin(vAngle*0.2),cos(vAngle*0.2)) , 0.5 , 0.02 );
+      mat4 D = quadrics_zcylinder_matrix();
 //      mat4 DT = mat4( vec4(0.5,0,0,0) , vec4(0,0.5,0,0) , vec4(0,0,1,0) , vec4(0,0,1,1) );
 //      D = quadrics_shape_transform( D , DT );
       mat4 Ti = inverse( T );
       mat4 Tit = transpose( Ti );
-      mat4 modelviewInverse = inverse( modelview );
+      mat4 modelviewInverse = inverse( modelview[0] );
       mat4 modelviewInverseTranspose = transpose( modelviewInverse );
       fModelViewVarianceInverse = Ti * modelviewInverse;
-      fProjectionInverse = inverse( projection );
       fQuadricsMatrix = modelviewInverseTranspose * Tit * D * Ti * modelviewInverse;
       ConvexHull2D hull = quadrics_2D_convex_hull( mvp, T );
       cvh_draw_triangles( hull );
@@ -164,11 +171,11 @@ int main(int argc, char *argv[])
     in vec4 fColor;
     in mat4 fQuadricsMatrix;
     in mat4 fModelViewVarianceInverse;
-    in mat4 fProjectionInverse;
     layout (location = 0) out vec4 FragColor; // first attached output buffer
     layout (depth_any) out float gl_FragDepth; // free to set depth to arbitrary value
     void main()
     {
+      mat4 fProjectionInverse = projection[1];
       vec2 vp = viewport[0];
       vec2 vp_rcp = viewport[1];
       vec3 fc = gl_FragCoord.xyz;
@@ -178,7 +185,7 @@ int main(int argc, char *argv[])
       vec4 p = fProjectionInverse * vec4(fc, 1.);
       vec3 P = rayQuadricsIntersection( fQuadricsMatrix , fModelViewVarianceInverse , vec3(0,0,0), p.xyz / p.w );
       vec3 N = quadricsSurfaceNormal( fQuadricsMatrix , P );
-      vec4 projP = projection * vec4( P, 1. );
+      vec4 projP = projection[0] * vec4( P, 1. );
       gl_FragDepth = 0.5 * (projP.z / projP.w + 1.0);
       vec4 color;
       vec3 ambientColor = vec3(0.1,0.1,0.1);

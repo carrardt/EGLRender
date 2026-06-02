@@ -72,6 +72,7 @@ namespace EGLRender
     GLShaderProgram& shader_program(int id);
     GLShaderProgram& shader_program(std::string_view name);
     std::shared_ptr<GLShaderProgram> shader_program_ptr(int id);
+    std::shared_ptr<GLShaderProgram> shader_program_ptr(std::string_view name);
 
     int vertex_buffers_id(std::string_view name);
     GLVertexBuffers& vertex_buffers(int id);
@@ -84,6 +85,8 @@ namespace EGLRender
     int element_buffer_id(std::string_view name);
     GLElementBuffer& element_buffer(int id);
     GLElementBuffer& element_buffer(std::string_view name);
+    std::shared_ptr<GLElementBuffer> element_buffer_ptr(int id);
+    std::shared_ptr<GLElementBuffer> element_buffer_ptr(std::string_view name);
     
   };
 

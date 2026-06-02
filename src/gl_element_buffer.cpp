@@ -70,7 +70,7 @@ namespace EGLRender
 
   void GLElementBuffer::draw(GLenum draw_primitive, GLuint start, GLint count)
   {
-    if(count == -1) count = m_size;
+    if(count == -1) count = m_size - start;
     use();
     glDrawElements( draw_primitive, count, GL_UNSIGNED_INT, reinterpret_cast<const void*>(start*sizeof(GLuint)) );
   }
