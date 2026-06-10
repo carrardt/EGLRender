@@ -1,6 +1,7 @@
-#define CVH_TRIANGLE_STRIP_MAX_VERTICES 16
+#define CVH_TRIANGLE_STRIP_MAX_VERTICES 8
 #define CVH_LINE_STRIP_MAX_VERTICES 8
 #define BOX_LINE_STRIP_MAX_VERTICES 16
+#define BOX_TRIANGLE_STRIP_MAX_VERTICES 12
 
 // on what side of vector ab does the point p lies ?
 // 1.0 => left, 0.0 => aligned , -1.0 => right
@@ -148,6 +149,41 @@ void quadrics_draw_box_lines( const mat4 modelViewProjMatrix, const mat4 varianc
   EndPrimitive();
 }
 
+void quadrics_emit_front_quad(vec4 v1, vec4 v2, vec4 v3, vec4 v4)
+{
+  const vec2 pv1 = v1.xy / v1.w;
+  const vec2 pv2 = v2.xy / v2.w;
+  const vec2 pv3 = v4.xy / v4.w;
+  const vec2 u = pv2 - pv1;
+  const vec2 v = pv3 - pv1;
+  const float Nz = u.x*v.y - u.y*v.x;
+  if( Nz > 0.0 )
+  {
+    gl_Position = v1; EmitVertex();
+    gl_Position = v4; EmitVertex();
+    gl_Position = v2; EmitVertex();
+    gl_Position = v3; EmitVertex();
+    EndPrimitive();
+  }
+}
+
+void quadrics_draw_box_triangles( const mat4 modelViewProjMatrix, const mat4 varianceMatrix )
+{
+  const mat4 M = modelViewProjMatrix * varianceMatrix;
+  vec4 v[8];
+  for(int i=0;i<8;i++)
+  {
+    v[i] = M * vec4( (i%2)*2-1 , ((i/2)%2)*2-1 ,  ((i/4)%2)*2-1 , 1. );
+  }
+  quadrics_emit_front_quad( v[4], v[5], v[7], v[6] );
+  quadrics_emit_front_quad( v[5], v[1], v[3], v[7] );
+  quadrics_emit_front_quad( v[1], v[0], v[2], v[3] );
+  quadrics_emit_front_quad( v[0], v[4], v[6], v[2] );
+  quadrics_emit_front_quad( v[6], v[7], v[3], v[2] );
+  quadrics_emit_front_quad( v[0], v[1], v[5], v[4] );
+}
+
+
 //------------------------------------------------------------------------------
 // Generic bounding box computation, works with any quadric type by splatting
 // in clip space the bounding box in parameter space;
@@ -190,16 +226,17 @@ ConvexHull2D quadrics_2D_convex_hull( const mat4 modelViewProjMatrix, const mat4
 
 void cvh_draw_triangles(ConvexHull2D cvh)
 {
-  for(int i=2;i<cvh.n;++i)
+  int i = 0;
+  int j = cvh.n - 1;
+  bool s = false;
+  while( i <= j )
   {
-    gl_Position = vec4( cvh.v[0].x , cvh.v[0].y , cvh.center.z , cvh.center.w );
+    int vi = s ? j-- : i++;
+    s = ! s;
+    gl_Position = vec4( cvh.v[vi].x , cvh.v[vi].y , cvh.center.z , cvh.center.w );
     EmitVertex();
-    gl_Position = vec4( cvh.v[i-1].x , cvh.v[i-1].y , cvh.center.z , cvh.center.w );
-    EmitVertex();
-    gl_Position = vec4( cvh.v[i].x , cvh.v[i].y , cvh.center.z , cvh.center.w );
-    EmitVertex();
-    EndPrimitive();
   }
+  EndPrimitive();
 }
 
 void cvh_draw_lines(ConvexHull2D cvh)

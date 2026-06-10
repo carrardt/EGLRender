@@ -35,8 +35,8 @@ int main(int argc, char *argv[])
 {
   using namespace EGLRender;
 
-  const int width = 800;
-  const int height = 600;
+  const int width = 1600;
+  const int height = 1024;
 
   EGLRenderSurfaceClass surf_type = EGLRenderSurfaceClass::PBUFFER;
   if( argc>1 )
@@ -73,68 +73,8 @@ int main(int argc, char *argv[])
     #include <uniform/camera>
     #include <quadrics/convex_hull>
     #include <quadrics/shape>
-    //#define CVH_DRAW_OUTLINE_ONLY 1
     layout (points) in;
-    #ifdef CVH_DRAW_OUTLINE_ONLY
-    layout (line_strip, max_vertices=CVH_LINE_STRIP_MAX_VERTICES) out;
-    #else
-    layout (line_strip, max_vertices=BOX_LINE_STRIP_MAX_VERTICES) out;
-    #endif
-    in float geomAngle[];
-    out vec4 fColor;
-    void main()
-    {
-      vec4 vPos = gl_in[0].gl_Position;
-      float vAngle = geomAngle[0];
-      fColor = vec4( clamp(vPos.x,0.0f,1.0f), clamp(vPos.y,0.0f,1.0f), clamp(vPos.x+vPos.y,0.0f,1.0f), 1.0f );
-      mat4 mvp = projection[0] * modelview[0];
-      mat4 rotz = { vec4(cos(vAngle*0.5),sin(vAngle*0.5),0,0) , vec4(-sin(vAngle*0.5),cos(vAngle*0.5),0,0) , vec4(0,0,1,0) , vec4(0,0,0,1) };
-      mat4 rotx = { vec4(1,0,0,0) , vec4(0,cos(vAngle*0.2),sin(vAngle*0.2),0) , vec4(0,-sin(vAngle*0.2),cos(vAngle*0.2),0) , vec4(0,0,0,1) };
-      mat4 T = quadrics_anisotropic_variance_matrix( vPos , 0.1 ) * rotz * rotx;
-//      mat4 T = quadrics_oriented_variance_matrix( vPos , vec3(cos(vAngle*0.5),sin(vAngle*0.5)*-sin(vAngle*0.2),cos(vAngle*0.2)) , 0.5 , 0.02 );
-      #ifdef CVH_DRAW_OUTLINE_ONLY
-      ConvexHull2D hull = quadrics_2D_convex_hull( mvp, T );
-      cvh_draw_lines( hull );
-      #else
-      quadrics_draw_box_lines( mvp, T );
-      #endif
-    }
-    )EOF" } ,
-    { GL_FRAGMENT_SHADER , R"EOF(
-    #version 460 core
-    #extension GL_ARB_shading_language_include : require
-    #include <uniform/camera>
-    #include <quadrics/raytracing>
-    in vec4 fColor;
-    layout (location = 0) out vec4 FragColor; // first attached output buffer
-    void main()
-    {
-      FragColor = fColor;
-    }
-    )EOF" }
-    };
-
-
-  std::vector<GLShaderTypeSource> pass2_shader_sources = {
-    { GL_VERTEX_SHADER , R"EOF(
-    #version 460 core
-    layout (location = 0) in vec4 aPos;
-    layout (location = 1) in float aAngle;
-    out float geomAngle;
-    void main()
-    {
-      gl_Position = aPos;
-      geomAngle = aAngle;
-    }
-    )EOF" } ,
-    { GL_GEOMETRY_SHADER , R"EOF(
-    #version 460 core
-    #extension GL_ARB_shading_language_include : require
-    #include <uniform/camera>
-    #include <quadrics/convex_hull>
-    #include <quadrics/shape>
-    layout (points) in;
-    layout (triangle_strip, max_vertices=CVH_TRIANGLE_STRIP_MAX_VERTICES) out;
+    layout (triangle_strip, max_vertices=BOX_TRIANGLE_STRIP_MAX_VERTICES) out;
     in float geomAngle[];
     out vec4 fColor;
     out mat4 fQuadricsMatrix;
@@ -143,7 +83,7 @@ int main(int argc, char *argv[])
     {
       vec4 vPos = gl_in[0].gl_Position;
       float vAngle = geomAngle[0];
-      fColor = vec4( clamp(vPos.x,0.0f,1.0f), clamp(vPos.y,0.0f,1.0f), clamp(vPos.x+vPos.y,0.0f,1.0f), 1.0f );
+      fColor = vec4( clamp(vPos.x,0.0f,1.0f), clamp(vPos.y,0.0f,1.0f), clamp(vPos.x+vPos.y,0.0f,1.0f), 0.3f );
       mat4 mvp = projection[0] * modelview[0];
       mat4 rotz = { vec4(cos(vAngle*0.5),sin(vAngle*0.5),0,0) , vec4(-sin(vAngle*0.5),cos(vAngle*0.5),0,0) , vec4(0,0,1,0) , vec4(0,0,0,1) };
       mat4 rotx = { vec4(1,0,0,0) , vec4(0,cos(vAngle*0.2),sin(vAngle*0.2),0) , vec4(0,-sin(vAngle*0.2),cos(vAngle*0.2),0) , vec4(0,0,0,1) };
@@ -157,8 +97,9 @@ int main(int argc, char *argv[])
       mat4 modelviewInverseTranspose = transpose( modelviewInverse );
       fModelViewVarianceInverse = Ti * modelviewInverse;
       fQuadricsMatrix = modelviewInverseTranspose * Tit * D * Ti * modelviewInverse;
-      ConvexHull2D hull = quadrics_2D_convex_hull( mvp, T );
-      cvh_draw_triangles( hull );
+      quadrics_draw_box_triangles( mvp , T );
+//      ConvexHull2D hull = quadrics_2D_convex_hull( mvp, T );
+//      cvh_draw_triangles( hull );
     }
     )EOF" } ,
     { GL_FRAGMENT_SHADER , R"EOF(
@@ -170,7 +111,7 @@ int main(int argc, char *argv[])
     in mat4 fQuadricsMatrix;
     in mat4 fModelViewVarianceInverse;
     layout (location = 0) out vec4 FragColor; // first attached output buffer
-    layout (depth_any) out float gl_FragDepth; // free to set depth to arbitrary value
+    layout (depth_greater) out float gl_FragDepth;
     void main()
     {
       mat4 fProjectionInverse = projection[1];
@@ -199,15 +140,86 @@ int main(int argc, char *argv[])
     )EOF" }
     };
 
-  const auto pass1_shader_id = eglm.create_shader_program( "quadrics_outline" , pass1_shader_sources, { .m_enable_flags = { GL_PROGRAM_POINT_SIZE , GL_DEPTH_TEST } } );
-  auto & shader1 = eglm.shader_program(pass1_shader_id);
+  std::vector<GLShaderTypeSource> pass2_shader_sources = {
+    { GL_VERTEX_SHADER , R"EOF(
+    #version 460 core
+    layout (location = 0) in vec4 aPos;
+    layout (location = 1) in float aAngle;
+    out float geomAngle;
+    void main()
+    {
+      gl_Position = aPos;
+      geomAngle = aAngle;
+    }
+    )EOF" } ,
+    { GL_GEOMETRY_SHADER , R"EOF(
+    #version 460 core
+    #extension GL_ARB_shading_language_include : require
+    #include <uniform/camera>
+    #include <quadrics/convex_hull>
+    #include <quadrics/shape>
+    layout (points) in;
+//    layout (line_strip, max_vertices=CVH_LINE_STRIP_MAX_VERTICES) out;
+//    layout (line_strip, max_vertices=BOX_LINE_STRIP_MAX_VERTICES) out;
+    layout (triangle_strip, max_vertices=BOX_TRIANGLE_STRIP_MAX_VERTICES) out;
+    in float geomAngle[];
+    out vec4 fColor;
+    void main()
+    {
+      vec4 vPos = gl_in[0].gl_Position;
+      float vAngle = geomAngle[0];
+      fColor = vec4( clamp(vPos.x,0.0f,1.0f), clamp(vPos.y,0.0f,1.0f), clamp(vPos.x+vPos.y,0.0f,1.0f), 0.33f );
+      mat4 mvp = projection[0] * modelview[0];
+      mat4 rotz = { vec4(cos(vAngle*0.5),sin(vAngle*0.5),0,0) , vec4(-sin(vAngle*0.5),cos(vAngle*0.5),0,0) , vec4(0,0,1,0) , vec4(0,0,0,1) };
+      mat4 rotx = { vec4(1,0,0,0) , vec4(0,cos(vAngle*0.2),sin(vAngle*0.2),0) , vec4(0,-sin(vAngle*0.2),cos(vAngle*0.2),0) , vec4(0,0,0,1) };
+      mat4 T = quadrics_anisotropic_variance_matrix( vPos , 0.1 ) * rotz * rotx;
+      /*
+      // outline only
+      ConvexHull2D hull = quadrics_2D_convex_hull( mvp, T ); 
+      cvh_draw_lines( hull );
+      */
+      /*
+      // box lines
+      quadrics_draw_box_lines( mvp, T );
+      */
+      // box faces
+      quadrics_draw_box_triangles( mvp , T );
+    }
+    )EOF" } ,
+    { GL_FRAGMENT_SHADER , R"EOF(
+    #version 460 core
+    #extension GL_ARB_shading_language_include : require
+    #include <uniform/camera>
+    #include <quadrics/raytracing>
+    in vec4 fColor;
+    layout (location = 0) out vec4 FragColor; // first attached output buffer
+    void main()
+    {
+      FragColor = fColor;
+    }
+    )EOF" }
+    };
   
-  const auto pass2_shader_id = eglm.create_shader_program( "quadrics_raytrace" , pass2_shader_sources, { .m_enable_flags = { GL_PROGRAM_POINT_SIZE , GL_DEPTH_TEST } } );
-  auto & shader2 = eglm.shader_program(pass2_shader_id);
-
+  const auto pass1_shader_id = eglm.create_shader_program(
+      "quadrics_raytrace"
+    , pass1_shader_sources
+    , { .m_blend_src = GL_ONE
+      , .m_blend_dst = GL_ZERO
+      , .m_enable_flags  = { GL_DEPTH_TEST } 
+      , .m_disable_flags = { GL_CULL_FACE , GL_BLEND } } );
+  auto & shader1 = eglm.shader_program(pass1_shader_id);
   std::cout << "Shader1 Pipeline config :" << std::boolalpha << std::endl;
   shader1.m_pipeline_config.to_stream( std::cout );    
 
+
+  const auto pass2_shader_id = eglm.create_shader_program(
+      "quadrics_outline"
+    , pass2_shader_sources
+    , { .m_blend_src = GL_SRC_ALPHA
+      , .m_blend_dst = GL_ONE_MINUS_SRC_ALPHA
+      , .m_enable_flags  = { GL_DEPTH_TEST , GL_BLEND }
+      , .m_disable_flags = { GL_CULL_FACE } } );
+  auto & shader2 = eglm.shader_program(pass2_shader_id);
   std::cout << "Shader2 Pipeline config :" << std::boolalpha << std::endl;
   shader2.m_pipeline_config.to_stream( std::cout );    
 
@@ -220,7 +232,7 @@ int main(int argc, char *argv[])
   camera.attach_shader( eglm.shader_program_ptr(pass2_shader_id) );
   camera.update_uniform();
 
-  const int n_points = 64;
+  const int n_points = 32;
   const auto elbuf_id = eglm.create_element_buffer("half_elements",n_points/2);
   auto & half_elements_buffer = eglm.element_buffer(elbuf_id);
   auto * el_buf_ptr = half_elements_buffer.map_buffer_write_only();
@@ -293,11 +305,13 @@ int main(int argc, char *argv[])
     {
       GLfloat move[3] = { 0.0f , 0.0f , 0.0f };
       GLfloat tilt[2] = { 0.0f , 0.0f };
+      GLfloat speed = 1.0f;
       int mouse_last_x = -1;
       int mouse_last_y = -1;
       int should_exit = false;
       int motion = true;
       int half_elements = false;
+      int draw_box = false;
       int left_drag = false;
       int mid_drag = false;
       int right_drag = false;
@@ -307,10 +321,17 @@ int main(int argc, char *argv[])
     auto & ren_surf = eglm.surface("main_window");
     ren_surf.m_event_handler.on_key_release = [&uistate,f=ren_surf.m_event_handler.on_key_release](int key)
     {
-       if( f ) f(key);
-       if( key == 32 ) uistate.motion = ! uistate.motion;
-       if( key == 104 ) uistate.half_elements = ! uistate.half_elements;
-       if( key == 65307 ) uistate.should_exit = true;
+      if( f ) f(key);
+      switch( key )
+      {
+        case 32:    uistate.motion = ! uistate.motion; break;
+        case 104:   uistate.half_elements = ! uistate.half_elements; break;
+        case 115:   uistate.speed *= 1.05f; break;
+        case 113:   uistate.speed *= 0.95f; break;
+        case 98:    uistate.draw_box = ! uistate.draw_box; break;
+        case 65307: uistate.should_exit = true; break;
+      }
+      //std::cout << key << std::endl;
     };
     ren_surf.m_event_handler.on_button_press = [&uistate,f=ren_surf.m_event_handler.on_button_press](int state, int b, int x,int y)
     {
@@ -358,8 +379,8 @@ int main(int argc, char *argv[])
       uistate.mouse_last_y = y;
     };
 
-    int i=0;
     bool first = true;
+    GLfloat phi_base = 0.0f;
     while( ! uistate.should_exit )
     {
       ren_surf.process_events();
@@ -380,7 +401,7 @@ int main(int argc, char *argv[])
 
       camera.update_uniform();
 
-      GLfloat phi_base = i*0.003f;
+      if( uistate.motion ) phi_base += uistate.speed * 0.001f;
       auto & glvbos = eglm.vertex_buffers(buf_id);
       // equivalent to
       // auto & glvbos = eglm.vertex_buffer("vertex_attribs");
@@ -405,17 +426,19 @@ int main(int argc, char *argv[])
       glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT|GL_STENCIL_BUFFER_BIT);
 
       glvbos.use();
-
+      
       shader1.use();
       if( uistate.half_elements ) half_elements_buffer.draw(GL_POINTS);
       else glDrawArrays(GL_POINTS, 0, n_points);
-      
-      shader2.use();
-      if( uistate.half_elements ) half_elements_buffer.draw(GL_POINTS);
-      else glDrawArrays(GL_POINTS, 0, n_points);
+
+      if( uistate.draw_box )
+      {
+        shader2.use();
+        if( uistate.half_elements ) half_elements_buffer.draw(GL_POINTS);
+        else glDrawArrays(GL_POINTS, 0, n_points);
+      }
 
       ren_surf.swap_buffers();
-      if( uistate.motion ) ++i;
     }
   }
 
