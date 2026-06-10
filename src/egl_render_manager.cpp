@@ -142,8 +142,20 @@ namespace EGLRender
     return m_egl->native_display();
   }
 
+  int EGLRenderManager::surface_id(std::string_view name)
+  {
+    auto it = m_surf_names.find(name.data());
+    if( it == m_surf_names.end() ) return -1;
+    else return it->second;
+  }
+
   EGLRenderSurface& EGLRenderManager::surface(int id)
   {
+    if( id<0 || id>=m_surf_names.size() )
+    {
+      std::cerr << "EGL Error: surface id "<<id<<" is invalid"<<std::endl;
+      std::abort();
+    }
     return * m_surfaces[id];
   }
 

@@ -48,7 +48,7 @@ namespace EGLRender
     vec3 m_forward = { 0.0f , 0.0f , 1.0f };
 
     GLfloat m_fov = 60.0f; // fov angle in degrees
-    GLfloat m_aspect_ratio = 16.0f/9.0f; // = w/h
+    GLfloat m_aspect_ratio = 800.0f / 600.0f; // = w/h
     GLfloat m_near = 0.1f;
     GLfloat m_far = 100.0f;
     GLint m_viewport[2] = { 800 , 600 };

@@ -64,7 +64,7 @@ namespace EGLRender
     EGLRenderer& renderer();
     EGLNativeDisplayType native_display();
 
-    int surface_id(int id);
+    int surface_id(std::string_view name);
     EGLRenderSurface& surface(int id);
     EGLRenderSurface& surface(std::string_view name);
 

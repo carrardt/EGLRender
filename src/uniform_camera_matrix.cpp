@@ -166,7 +166,8 @@ namespace EGLRender
   void UniformCameraMatrix::perspective(float fov, float ratio, float near, float far)
   {
     m_fov = fov;
-    m_aspect_ratio = ratio;
+    if( ratio == 0.0 ) m_aspect_ratio = m_viewport[0] * 1.0 / m_viewport[1];
+    else m_aspect_ratio = ratio;
     m_near = near;
     m_far = far;
     update_projection();
