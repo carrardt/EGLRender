@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
       vec4 vPos = gl_in[0].gl_Position;
       float vAngle = geomAngle[0];
       fColor = vec4( clamp(vPos.x,0.0f,1.0f), clamp(vPos.y,0.0f,1.0f), clamp(vPos.x+vPos.y,0.0f,1.0f), 0.3f );
-      mat4 mvp = projection[0] * modelview[0];
+      mat4 mvp = camera.projection[0] * camera.modelview[0];
       mat4 rotz = { vec4(cos(vAngle*0.5),sin(vAngle*0.5),0,0) , vec4(-sin(vAngle*0.5),cos(vAngle*0.5),0,0) , vec4(0,0,1,0) , vec4(0,0,0,1) };
       mat4 rotx = { vec4(1,0,0,0) , vec4(0,cos(vAngle*0.2),sin(vAngle*0.2),0) , vec4(0,-sin(vAngle*0.2),cos(vAngle*0.2),0) , vec4(0,0,0,1) };
       mat4 T = quadrics_anisotropic_variance_matrix( vPos , 0.1 ) * rotz * rotx;
@@ -93,7 +93,7 @@ int main(int argc, char *argv[])
 //      mat4 D = quadrics_zcylinder_matrix();
       mat4 Ti = inverse( T );
       mat4 Tit = transpose( Ti );
-      mat4 modelviewInverse = inverse( modelview[0] );
+      mat4 modelviewInverse = inverse( camera.modelview[0] );
       mat4 modelviewInverseTranspose = transpose( modelviewInverse );
       fModelViewVarianceInverse = Ti * modelviewInverse;
       fQuadricsMatrix = modelviewInverseTranspose * Tit * D * Ti * modelviewInverse;
@@ -114,9 +114,9 @@ int main(int argc, char *argv[])
     layout (depth_greater) out float gl_FragDepth;
     void main()
     {
-      mat4 fProjectionInverse = projection[1];
-      vec2 vp = viewport[0];
-      vec2 vp_rcp = viewport[1];
+      mat4 fProjectionInverse = camera.projection[1];
+      vec2 vp = camera.viewport[0];
+      vec2 vp_rcp = camera.viewport[1];
       vec3 fc = gl_FragCoord.xyz;
       fc.xy /= vp;
       fc *= 2.0;
@@ -124,7 +124,7 @@ int main(int argc, char *argv[])
       vec4 p = fProjectionInverse * vec4(fc, 1.);
       vec3 P = rayQuadricsIntersection( fQuadricsMatrix , fModelViewVarianceInverse , vec3(0,0,0), p.xyz / p.w );
       vec3 N = quadricsSurfaceNormal( fQuadricsMatrix , P );
-      vec4 projP = projection[0] * vec4( P, 1. );
+      vec4 projP = camera.projection[0] * vec4( P, 1. );
       gl_FragDepth = 0.5 * (projP.z / projP.w + 1.0);
       vec4 color;
       vec3 ambientColor = vec3(0.1,0.1,0.1);
@@ -169,7 +169,7 @@ int main(int argc, char *argv[])
       vec4 vPos = gl_in[0].gl_Position;
       float vAngle = geomAngle[0];
       fColor = vec4( clamp(vPos.x,0.0f,1.0f), clamp(vPos.y,0.0f,1.0f), clamp(vPos.x+vPos.y,0.0f,1.0f), 0.33f );
-      mat4 mvp = projection[0] * modelview[0];
+      mat4 mvp = camera.projection[0] * camera.modelview[0];
       mat4 rotz = { vec4(cos(vAngle*0.5),sin(vAngle*0.5),0,0) , vec4(-sin(vAngle*0.5),cos(vAngle*0.5),0,0) , vec4(0,0,1,0) , vec4(0,0,0,1) };
       mat4 rotx = { vec4(1,0,0,0) , vec4(0,cos(vAngle*0.2),sin(vAngle*0.2),0) , vec4(0,-sin(vAngle*0.2),cos(vAngle*0.2),0) , vec4(0,0,0,1) };
       mat4 T = quadrics_anisotropic_variance_matrix( vPos , 0.1 ) * rotz * rotx;

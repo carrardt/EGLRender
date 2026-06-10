@@ -66,11 +66,11 @@ namespace EGLRender
 
     // default names are those defined in include header "uniform/camera"
     void attach_shader( std::shared_ptr<GLShaderProgram> prog
-                         , std::string_view block = "camera"
-                         , std::string_view mvmat = "modelview"
-                         , std::string_view projmat = "projection"
-                         , std::string_view aspectname = "aspect_ratio"
-                         , std::string_view viewportname = "viewport" );
+                         , std::string_view block        = "CameraUniformObject"
+                         , std::string_view mvmat        = "CameraUniformObject.modelview"
+                         , std::string_view projmat      = "CameraUniformObject.projection"
+                         , std::string_view aspectname   = "CameraUniformObject.aspect_ratio"
+                         , std::string_view viewportname = "CameraUniformObject.viewport" );
 
     void detach_shader( std::shared_ptr<GLShaderProgram> prog );
                          
