@@ -76,7 +76,7 @@ namespace EGLRender
           auto log_data = std::make_unique_for_overwrite<char[]>(info_log_len+2);
           glGetShaderInfoLog(shaderId,info_log_len,&info_log_len,log_data.get());      
           log_data[info_log_len] = '\0';
-          std::cerr << "Shader #"<<shaderId<<" : " << ( (info_log_len>0) ? log_data.get() : "ok" ) << std::endl;
+          std::cerr << gl_enum_to_string(shader.m_type) <<" #"<<shaderId<<", compile error : " << ( (info_log_len>0) ? log_data.get() : "ok" ) << std::endl;
           glDeleteShader( shaderId );
         }
         else
@@ -106,7 +106,7 @@ namespace EGLRender
       auto log_data = std::make_unique_for_overwrite<char[]>(info_log_len+2);
       glGetProgramInfoLog(prog,info_log_len,&info_log_len,log_data.get());
       log_data[info_log_len] = '\0';
-      std::cerr << "Program #"<<prog<<" : " << ( (info_log_len>0) ? log_data.get() : "ok" ) << std::endl;
+      std::cerr << "Program #"<<prog<<" link error : " << ( (info_log_len>0) ? log_data.get() : "ok" ) << std::endl;
       glDeleteProgram(prog);
       return 0;
     }
