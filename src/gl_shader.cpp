@@ -80,38 +80,15 @@ namespace EGLRender
           if( info_log_len > 0 )
           {
             const std::string errstr = log_data.get();
-            const auto sep1 = errstr.find(':');
-            const auto sep2 = errstr.find(':',sep1+1);
-            const std::string n1str = errstr.substr(0,sep1);
-            std::string n2str = errstr.substr(sep1+1,sep2-sep1);
-            const auto n2str_p1 = n2str.find('(');
-            const auto n2str_p2 = n2str.find(')');
-            const std::string n3str = n2str.substr( n2str_p1+1 , n2str_p2-n2str_p1-1 );
-            n2str = n2str.substr(0,n2str_p1);
-            const int n1 = std::atoi(n1str.data());
-            const int n2 = std::atoi(n2str.data());
-            const int n3 = std::atoi(n3str.data()) - 1;
-            std::cerr << gl_enum_to_string(shader.m_type) <<" #"<<shaderId<<" : at line "<<n2<<" , column "<<n3<<" : " << errstr.substr(sep2+1);
-            int l=1;
-            long lpos=0;
-            while( l < (n2+4) && lpos!=std::string::npos )
+            std::cerr << gl_enum_to_string(shader.m_type) <<" #"<<shaderId<<" : " << errstr;
+            long lpos=0, next_pos=0;
+            int l = 1;
+            while( next_pos != std::string::npos )
             {
-              const auto next_lpos = parsed_shader_source.find('\n',lpos);
-              if( l>(n2-4) )
-              {
-                std::string line_str = parsed_shader_source.substr( lpos, next_lpos - lpos );
-                std::cerr<< std::format("{:5} : ",l) << line_str << std::endl;
-                if( l == n2 )
-                {
-                  for(int i=0;i<line_str.size();i++)
-                  {
-                    if(i==n3) line_str[i]='^';
-                    else if( line_str[i]!='\t' ) line_str[i]=' ';
-                  }
-                  std::cerr<< "        " << line_str << std::endl;            
-                }
-              }
-              lpos = next_lpos+1;
+              next_pos = parsed_shader_source.find('\n',lpos);
+              std::string line_str = parsed_shader_source.substr( lpos, next_pos - lpos );
+              std::cerr<< std::format("{:5} : ",l) << line_str << std::endl;
+              lpos = next_pos+1;
               ++l;
             }
           }

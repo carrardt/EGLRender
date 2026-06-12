@@ -147,7 +147,7 @@ namespace EGLRender
   static std::map<std::string,std::string> g_named_strings = {};
   void platform_add_named_string(std::string_view name, std::string_view data)
   {
-    std::cout<<"platform_add_named_string("<<name<<",...)"<<std::endl;
+    //std::cout<<"platform_add_named_string("<<name<<",...)"<<std::endl;
     g_named_strings[std::string(name)] = data;
   }
   
