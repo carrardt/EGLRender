@@ -127,7 +127,6 @@ namespace EGLRender
       int i = 0;
       while( GL_NAMED_STRINGS[i][0] != nullptr )
       {
-        std::cout<<"add named string '"<<GL_NAMED_STRINGS[i][0]<<"'"<<std::endl;
         platform_add_named_string(GL_NAMED_STRINGS[i][0],GL_NAMED_STRINGS[i][1]);
         ++i;
       }
