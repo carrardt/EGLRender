@@ -225,7 +225,7 @@ int main(int argc, char *argv[])
 
   auto camera_id = eglm.create_camera("pov");
   auto & camera = eglm.camera(camera_id);
-  camera.look_at( {0,5,10} , {0,0,0} );
+  camera.look_at( {0,1,2} , {0,0,0} );
   camera.perspective(60,width*1.0f/height,0.1f,100.0f); // disable projection
   camera.viewport(width,height);
   camera.attach_shader( eglm.shader_program_ptr(pass1_shader_id) );
@@ -250,6 +250,9 @@ int main(int argc, char *argv[])
     auto & ren_surf = eglm.surface("main_window");
     const int width = ren_surf.width();
     const int height = ren_surf.height();
+
+    int pixbuf_id = eglm.create_pixel_buffer("pixelread",width,height);
+    auto & pixbuf = eglm.pixel_buffer(pixbuf_id);
 
     glClear(GL_COLOR_BUFFER_BIT);
 
@@ -284,23 +287,48 @@ int main(int argc, char *argv[])
     shader2.use();
     glDrawArrays(GL_POINTS, 0, n_points);
 
-    size_t pixel_data_sz = width * height * 4;
-    auto pixel_data = std::make_unique_for_overwrite<char[]>(pixel_data_sz);
-    glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixel_data.get() );
+    //size_t pixel_data_sz = width * height * 4;
+    //auto pixel_data = std::make_unique_for_overwrite<char[]>(pixel_data_sz);
+    pixbuf.use();
+    glReadPixels(0, 0, pixbuf.width(), pixbuf.height(), pixbuf.format(), pixbuf.data_type(), NULL /*pixel_data.get()*/ );
     std::string filename = std::format("eglscreen{}x{}", width,height);
-    {
-      std::ofstream fout(filename+".raw");
-      fout.write( pixel_data.get() , pixel_data_sz );
-      fout.close();
-    }
-    {
-      std::ofstream fout(filename+".to-png");
-      fout << std::format("convert -depth 8 -size {}x{}+0 rgba:{}.raw {}.png",width,height,filename,filename) << std::endl;
-      fout.close();
-    }
+    std::ofstream raw_out(filename+".raw");
+    raw_out.write( (const char*) pixbuf.map_buffer_read_only() , pixbuf.data_size() );
+    pixbuf.unmap_buffer();
+    raw_out.close();
+    std::ofstream meta_out(filename+".to-png");
+    meta_out << std::format("convert -depth 8 -size {}x{}+0 rgba:{}.raw {}.png",width,height,filename,filename) << std::endl;
+    meta_out.close();
   }
   else
   {
+    auto & ren_surf = eglm.surface("main_window");
+    ren_surf.make_current();
+
+    int pixbuf_id = eglm.create_pixel_buffer("pixelwrite",width,height,GL_RGBA,GL_PIXEL_UNPACK_BUFFER);
+    auto & pixbuf = eglm.pixel_buffer(pixbuf_id);
+    pixbuf.use();
+    auto * pixel_data = pixbuf.map_buffer_write_only();
+    for(GLuint h=0;h<height;h++)
+    {
+      uint32_t r = h*128/height;
+      uint32_t g = 128 - r;
+      uint32_t b = h*64/height;
+      uint32_t a = 255;
+      uint32_t col = (r<<24) | (g<<16) | (b<<8) | a;
+      for(GLuint w=0;w<width;w++)
+      {
+        pixel_data[h*width+w] = col;
+      }
+    }
+    pixbuf.unmap_buffer();
+    GLuint frametexture = pixbuf.copy_to_texture();
+    
+    GLuint framebuffer = 0;
+    glGenFramebuffers(1, &framebuffer); 
+    glBindFramebuffer(GL_READ_FRAMEBUFFER,framebuffer);
+    glNamedFramebufferTexture(framebuffer, GL_COLOR_ATTACHMENT0, frametexture, 0 );
+    
     struct
     {
       GLfloat move[3] = { 0.0f , 0.0f , 0.0f };
@@ -318,7 +346,6 @@ int main(int argc, char *argv[])
     } uistate;
 
     int update_cam = 0;
-    auto & ren_surf = eglm.surface("main_window");
     ren_surf.m_event_handler.on_key_release = [&uistate,f=ren_surf.m_event_handler.on_key_release](int key)
     {
       if( f ) f(key);
@@ -423,7 +450,26 @@ int main(int argc, char *argv[])
       glvbos.host_unmap(0); v=nullptr;
       glvbos.host_unmap(1); a=nullptr;
 
-      glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT|GL_STENCIL_BUFFER_BIT);
+      glClear( /*GL_COLOR_BUFFER_BIT| */ GL_DEPTH_BUFFER_BIT|GL_STENCIL_BUFFER_BIT);
+
+//
+    pixel_data = pixbuf.map_buffer_write_only();
+    for(GLuint h=0;h<height;h++)
+    {
+      uint32_t r = std::clamp( sin(phi_base*30+(h*M_PI*5/height))*127+127.5 , 1.0 , 255.0 );
+      uint32_t g = h*255/height;
+      uint32_t b = std::clamp( cos(phi_base*43+(h*M_PI*3/height))*127+127.5 , 1.0 , 255.0 );
+      uint32_t a = 255;
+      uint32_t col = (r<<24) | (g<<16) | (b<<8) | a;
+      for(GLuint w=0;w<width;w++)
+      {
+        pixel_data[h*width+w] = col;
+      }
+    }
+    pixbuf.unmap_buffer();
+    pixbuf.copy_to_texture();
+    glBlitFramebuffer(0,0,width,height,0,0,width,height,GL_COLOR_BUFFER_BIT,GL_NEAREST);
+//
 
       glvbos.use();
       

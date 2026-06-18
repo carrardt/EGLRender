@@ -26,6 +26,7 @@ under the License.
 #include <EGLRender/gl_shader.h>
 #include <EGLRender/gl_vbo.h>
 #include <EGLRender/gl_element_buffer.h>
+#include <EGLRender/gl_pixel_buffer.h>
 #include <EGLRender/uniform_camera_matrix.h>
 
 #include <map>
@@ -46,12 +47,14 @@ namespace EGLRender
     std::vector< std::shared_ptr<GLVertexBuffers> > m_buffers;
     std::vector< std::shared_ptr<UniformCameraMatrix> > m_cameras;
     std::vector< std::shared_ptr<GLElementBuffer> > m_elbuffers;
+    std::vector< std::shared_ptr<GLPixelBuffer> > m_pixbuffers;
 
     std::map<std::string,size_t> m_surf_names;
     std::map<std::string,size_t> m_prog_names;
     std::map<std::string,size_t> m_buf_names;
     std::map<std::string,size_t> m_camera_names;
     std::map<std::string,size_t> m_elbuf_names;
+    std::map<std::string,size_t> m_pixbuf_names;
 
     void init_platform(bool use_native_dpy=true, bool gles_mode=false);
     int create_surface( std::string_view name, EGLRenderSurfaceClass surf_type=EGLRenderSurfaceClass::PBUFFER, EGLint w=1920, EGLint h=1080, EGLint colbits=8, EGLint alphabits=8, EGLint zbits=24 , EGLint stencilbits=8);
@@ -59,6 +62,7 @@ namespace EGLRender
     int create_vertex_buffers( std::string_view name, GLuint n_vertices, std::span<const GLint> attrib_formats );
     int create_vertex_buffers( std::string_view name, GLuint n_vertices, const std::vector<GLint>& attrib_formats );
     int create_element_buffer( std::string_view name, GLuint n_elements, GLuint restart_index=0 );
+    int create_pixel_buffer( std::string_view name, GLuint width, GLuint height, GLenum format = GL_RGBA, GLenum direction = GL_PIXEL_PACK_BUFFER );
     int create_camera( std::string_view name );
 
     EGLRenderer& renderer();
@@ -88,6 +92,11 @@ namespace EGLRender
     std::shared_ptr<GLElementBuffer> element_buffer_ptr(int id);
     std::shared_ptr<GLElementBuffer> element_buffer_ptr(std::string_view name);
     
+    int pixel_buffer_id(std::string_view name);
+    GLPixelBuffer& pixel_buffer(int id);
+    GLPixelBuffer& pixel_buffer(std::string_view name);
+    std::shared_ptr<GLPixelBuffer> pixel_buffer_ptr(int id);
+    std::shared_ptr<GLPixelBuffer> pixel_buffer_ptr(std::string_view name);
   };
 
 }

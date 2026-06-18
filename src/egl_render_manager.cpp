@@ -121,10 +121,33 @@ namespace EGLRender
       m_elbuf_names[name.data()] = elbuffer_id;
       m_elbuffers.emplace_back( new GLElementBuffer { n_elements, restart_index } );
 #     ifndef NDEBUG
-      std::cout << "EGL : vertex buffer '"<<name<<"' @"<<elbuffer_id<<std::endl;
+      std::cout << "EGL : element buffer '"<<name<<"' @"<<elbuffer_id<<std::endl;
 #     endif
       return elbuffer_id;
     }
+  }
+
+  int EGLRenderManager::create_pixel_buffer( std::string_view name, GLuint width, GLuint height, GLenum format, GLenum direction )
+  {
+    auto it = m_pixbuf_names.find(name.data());
+    if( it != m_pixbuf_names.end() )
+    {
+      if( width != m_pixbuffers[it->second]->width() || height != m_pixbuffers[it->second]->height())
+      {
+        m_pixbuffers[it->second]->resize( width, height );
+      }
+      return it->second;
+    }
+    else
+    {
+      const size_t pixbuffer_id = m_pixbuffers.size();
+      m_pixbuf_names[name.data()] = pixbuffer_id;
+      m_pixbuffers.emplace_back( new GLPixelBuffer { width, height, format, direction } );
+#     ifndef NDEBUG
+      std::cout << "EGL : pixel buffer '"<<name<<"' @"<<pixbuffer_id<<std::endl;
+#     endif
+      return pixbuffer_id;
+    }    
   }
 
   EGLRenderer& EGLRenderManager::renderer()
@@ -294,5 +317,40 @@ namespace EGLRender
     return element_buffer_ptr( element_buffer_id(name) );
   }
 
+
+
+  int EGLRenderManager::pixel_buffer_id(std::string_view name)
+  {
+    auto it = m_pixbuf_names.find(name.data());
+    if( it != m_pixbuf_names.end() ) return it->second;
+    else return -1;
+  }
+
+  GLPixelBuffer& EGLRenderManager::pixel_buffer(int id)
+  {
+    return * m_pixbuffers[id];
+  }
+
+  GLPixelBuffer& EGLRenderManager::pixel_buffer(std::string_view name)
+  {
+    auto it = m_pixbuf_names.find(name.data());
+    if( it == m_pixbuf_names.end() )
+    {
+      std::cerr << "EGL Error: pixel buffer named "<<name<<" not found"<<std::endl;
+      std::abort();
+    }
+    return pixel_buffer(it->second);
+  }
+
+  std::shared_ptr<GLPixelBuffer> EGLRenderManager::pixel_buffer_ptr(int id)
+  {
+    if( id<0 || id>=m_pixbuffers.size() ) return nullptr;
+    return m_pixbuffers[id];
+  }
+  
+  std::shared_ptr<GLPixelBuffer> EGLRenderManager::pixel_buffer_ptr(std::string_view name)
+  {
+    return pixel_buffer_ptr( pixel_buffer_id(name) );
+  }
 
 }
