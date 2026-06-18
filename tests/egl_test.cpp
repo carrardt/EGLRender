@@ -287,13 +287,16 @@ int main(int argc, char *argv[])
     shader2.use();
     glDrawArrays(GL_POINTS, 0, n_points);
 
-    //size_t pixel_data_sz = width * height * 4;
-    //auto pixel_data = std::make_unique_for_overwrite<char[]>(pixel_data_sz);
+//    size_t pixel_data_sz = width * height * 4;
+//    auto pixel_data = std::make_unique_for_overwrite<char[]>(pixel_data_sz);
+
     pixbuf.use();
+    size_t pixel_data_sz = pixbuf.data_size();
+    
     glReadPixels(0, 0, pixbuf.width(), pixbuf.height(), pixbuf.format(), pixbuf.data_type(), NULL /*pixel_data.get()*/ );
     std::string filename = std::format("eglscreen{}x{}", width,height);
     std::ofstream raw_out(filename+".raw");
-    raw_out.write( (const char*) pixbuf.map_buffer_read_only() , pixbuf.data_size() );
+    raw_out.write( (const char*) /*pixel_data.get()*/ pixbuf.map_buffer_read_only() , pixel_data_sz );
     pixbuf.unmap_buffer();
     raw_out.close();
     std::ofstream meta_out(filename+".to-png");
@@ -324,10 +327,11 @@ int main(int argc, char *argv[])
     pixbuf.unmap_buffer();
     GLuint frametexture = pixbuf.copy_to_texture();
     
-    GLuint framebuffer = 0;
-    glGenFramebuffers(1, &framebuffer); 
-    glBindFramebuffer(GL_READ_FRAMEBUFFER,framebuffer);
-    glNamedFramebufferTexture(framebuffer, GL_COLOR_ATTACHMENT0, frametexture, 0 );
+    int fb_id = eglm.create_frame_buffer("background" /* , GL_READ_FRAMEBUFFER */ );
+    auto & fb = eglm.frame_buffer(fb_id);
+    fb.bind();
+    fb.attach_texture( pixbuf.copy_to_texture() /* , GL_COLOR_ATTACHMENT0 */ );
+    fb.unbind();
     
     struct
     {
@@ -452,24 +456,25 @@ int main(int argc, char *argv[])
 
       glClear( /*GL_COLOR_BUFFER_BIT| */ GL_DEPTH_BUFFER_BIT|GL_STENCIL_BUFFER_BIT);
 
-//
-    pixel_data = pixbuf.map_buffer_write_only();
-    for(GLuint h=0;h<height;h++)
-    {
-      uint32_t r = std::clamp( sin(phi_base*30+(h*M_PI*5/height))*127+127.5 , 1.0 , 255.0 );
-      uint32_t g = h*255/height;
-      uint32_t b = std::clamp( cos(phi_base*43+(h*M_PI*3/height))*127+127.5 , 1.0 , 255.0 );
-      uint32_t a = 255;
-      uint32_t col = (r<<24) | (g<<16) | (b<<8) | a;
-      for(GLuint w=0;w<width;w++)
+      // draw a background piture
+      pixel_data = pixbuf.map_buffer_write_only();
+      for(GLuint h=0;h<height;h++)
       {
-        pixel_data[h*width+w] = col;
+        uint32_t r = std::clamp( sin(phi_base*30+(h*M_PI*5/height))*127+127.5 , 1.0 , 255.0 );
+        uint32_t g = h*255/height;
+        uint32_t b = std::clamp( cos(phi_base*43+(h*M_PI*3/height))*127+127.5 , 1.0 , 255.0 );
+        uint32_t a = 255;
+        uint32_t col = (r<<24) | (g<<16) | (b<<8) | a;
+        for(GLuint w=0;w<width;w++)
+        {
+          pixel_data[h*width+w] = col;
+        }
       }
-    }
-    pixbuf.unmap_buffer();
-    pixbuf.copy_to_texture();
-    glBlitFramebuffer(0,0,width,height,0,0,width,height,GL_COLOR_BUFFER_BIT,GL_NEAREST);
-//
+      pixbuf.unmap_buffer();
+      pixbuf.copy_to_texture();
+      fb.bind();
+      glBlitFramebuffer(0,0,width,height,0,0,width,height,GL_COLOR_BUFFER_BIT,GL_NEAREST);
+      fb.unbind();
 
       glvbos.use();
       

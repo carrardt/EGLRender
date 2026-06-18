@@ -17,26 +17,38 @@ specific language governing permissions and limitations
 under the License.
 */
 
-#pragma once
+#include <EGLRender/gl_frame_buffer.h>
+#include <EGLRender/egl_error.h>
 
-#include <EGLRender/egl_platform.h>
+#include <cassert>
+#include <iostream>
 
 namespace EGLRender
 {
-
-  // 32-bist only pixel/depth buffer, either GL_RGBA, GL_DEPTH_COMPONENT or GL_DEPTH_STENCIL
-  struct GLFrameBuffer
+  GLuint GLFrameBuffer::gen_buffer_id()
   {
-    // m_binnd_target must be GL_READ_FRAMEBUFFER, GL_DRAW_FRAMEBUFFER or GL_FRAMEBUFFER
-    GLenum m_bind_target = GL_READ_FRAMEBUFFER;
-    GLuint m_framebuffer = gen_buffer_id();
-    static GLuint gen_buffer_id();
+    GLuint buf_id = 0;
+    glGenFramebuffers(1, &buf_id); 
+    return buf_id;
+  }
 
-    void bind();
-    void unbind();
-    void attach_texture(GLuint texture, GLenum attachment=GL_COLOR_ATTACHMENT0);
+  void GLFrameBuffer::bind()
+  {
+    glBindFramebuffer(m_bind_target,m_framebuffer);
+  }
 
-    ~GLFrameBuffer();
-  };
+  void GLFrameBuffer::unbind()
+  {
+    glBindFramebuffer(m_bind_target,0);
+  }
+  
+  void GLFrameBuffer::attach_texture(GLuint texture, GLenum attachment)
+  {
+    glNamedFramebufferTexture(m_framebuffer, attachment, texture, 0 );
+  }
 
+  GLFrameBuffer::~GLFrameBuffer()
+  {
+    glDeleteFramebuffers(1, &m_framebuffer); 
+  }
 }

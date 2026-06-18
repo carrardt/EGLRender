@@ -150,6 +150,30 @@ namespace EGLRender
     }    
   }
 
+  int EGLRenderManager::create_frame_buffer( std::string_view name, GLenum fbtarget )
+  {
+    auto it = m_framebuf_names.find(name.data());
+    if( it != m_framebuf_names.end() )
+    {
+      if( m_framebuffers[it->second]->m_bind_target != fbtarget )
+      {
+        m_framebuffers[it->second]->unbind();
+        m_framebuffers[it->second]->m_bind_target = fbtarget;
+      }
+      return it->second;
+    }
+    else
+    {
+      const size_t framebuffer_id = m_framebuffers.size();
+      m_framebuf_names[name.data()] = framebuffer_id;
+      m_framebuffers.emplace_back( new GLFrameBuffer { fbtarget } );
+#     ifndef NDEBUG
+      std::cout << "EGL : frame buffer '"<<name<<"' @"<<framebuffer_id<<std::endl;
+#     endif
+      return framebuffer_id;
+    }
+  }
+
   EGLRenderer& EGLRenderManager::renderer()
   {
     return *m_egl;
@@ -351,6 +375,29 @@ namespace EGLRender
   std::shared_ptr<GLPixelBuffer> EGLRenderManager::pixel_buffer_ptr(std::string_view name)
   {
     return pixel_buffer_ptr( pixel_buffer_id(name) );
+  }
+
+  int EGLRenderManager::frame_buffer_id( std::string_view name )
+  {
+    auto it = m_framebuf_names.find(name.data());
+    if( it == m_framebuf_names.end() ) return -1;
+    else return it->second;
+  }
+  
+  GLFrameBuffer& EGLRenderManager::frame_buffer( int id )
+  {
+    return * m_framebuffers[id];
+  }
+  
+  GLFrameBuffer& EGLRenderManager::frame_buffer( std::string_view name )
+  {
+    auto it = m_framebuf_names.find(name.data());
+    if( it == m_framebuf_names.end() )
+    {
+      std::cerr << "EGL Error: frame buffer named "<<name<<" not found"<<std::endl;
+      std::abort();
+    }
+    return frame_buffer(it->second);
   }
 
 }

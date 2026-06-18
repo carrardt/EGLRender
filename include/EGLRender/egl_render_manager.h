@@ -27,6 +27,7 @@ under the License.
 #include <EGLRender/gl_vbo.h>
 #include <EGLRender/gl_element_buffer.h>
 #include <EGLRender/gl_pixel_buffer.h>
+#include <EGLRender/gl_frame_buffer.h>
 #include <EGLRender/uniform_camera_matrix.h>
 
 #include <map>
@@ -48,6 +49,7 @@ namespace EGLRender
     std::vector< std::shared_ptr<UniformCameraMatrix> > m_cameras;
     std::vector< std::shared_ptr<GLElementBuffer> > m_elbuffers;
     std::vector< std::shared_ptr<GLPixelBuffer> > m_pixbuffers;
+    std::vector< std::shared_ptr<GLFrameBuffer> > m_framebuffers;
 
     std::map<std::string,size_t> m_surf_names;
     std::map<std::string,size_t> m_prog_names;
@@ -55,6 +57,7 @@ namespace EGLRender
     std::map<std::string,size_t> m_camera_names;
     std::map<std::string,size_t> m_elbuf_names;
     std::map<std::string,size_t> m_pixbuf_names;
+    std::map<std::string,size_t> m_framebuf_names;
 
     void init_platform(bool use_native_dpy=true, bool gles_mode=false);
     int create_surface( std::string_view name, EGLRenderSurfaceClass surf_type=EGLRenderSurfaceClass::PBUFFER, EGLint w=1920, EGLint h=1080, EGLint colbits=8, EGLint alphabits=8, EGLint zbits=24 , EGLint stencilbits=8);
@@ -64,6 +67,7 @@ namespace EGLRender
     int create_element_buffer( std::string_view name, GLuint n_elements, GLuint restart_index=0 );
     int create_pixel_buffer( std::string_view name, GLuint width, GLuint height, GLenum format = GL_RGBA, GLenum direction = GL_PIXEL_PACK_BUFFER );
     int create_camera( std::string_view name );
+    int create_frame_buffer( std::string_view name , GLenum fbtarget = GL_READ_FRAMEBUFFER );
 
     EGLRenderer& renderer();
     EGLNativeDisplayType native_display();
@@ -97,6 +101,10 @@ namespace EGLRender
     GLPixelBuffer& pixel_buffer(std::string_view name);
     std::shared_ptr<GLPixelBuffer> pixel_buffer_ptr(int id);
     std::shared_ptr<GLPixelBuffer> pixel_buffer_ptr(std::string_view name);
+
+    int frame_buffer_id( std::string_view name );
+    GLFrameBuffer& frame_buffer( int id );
+    GLFrameBuffer& frame_buffer( std::string_view name );
   };
 
 }
