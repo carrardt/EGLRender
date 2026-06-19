@@ -36,6 +36,11 @@ namespace EGLRender
 
   int EGLRenderManager::create_surface( std::string_view name, EGLRenderSurfaceClass surf_type, EGLint w, EGLint h, EGLint colbits, EGLint alphabits, EGLint zbits, EGLint stencilbits )
   {
+    return this->create_surface( name, name, surf_type, w, h, colbits, alphabits, zbits, stencilbits );
+  }
+
+  int EGLRenderManager::create_surface( std::string_view name, std::string_view title, EGLRenderSurfaceClass surf_type, EGLint w, EGLint h, EGLint colbits, EGLint alphabits, EGLint zbits, EGLint stencilbits)
+  {
     if( m_surf_names.find(name.data()) != m_surf_names.end() )
     {
       std::cerr << "EGL Error: a surface named '"<<name<<"' already exists"<<std::endl;
@@ -43,7 +48,7 @@ namespace EGLRender
     }
     const size_t surf_id = m_surfaces.size();
     m_surf_names[name.data()] = surf_id;
-    m_surfaces.emplace_back( new EGLRenderSurface { m_egl, surf_type, w, h, colbits, alphabits, zbits, stencilbits, name.data() } );
+    m_surfaces.emplace_back( new EGLRenderSurface { m_egl, surf_type, w, h, colbits, alphabits, zbits, stencilbits, title.data() } );
 #   ifndef NDEBUG
     std::cout << "EGL : surface '"<<name<<"' @"<<surf_id<<std::endl;
 #   endif
