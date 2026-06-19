@@ -30,6 +30,7 @@ under the License.
 #include <memory>
 #include <cmath>
 #include <format>
+#include <chrono>
 
 int main(int argc, char *argv[])
 {
@@ -130,7 +131,7 @@ int main(int argc, char *argv[])
       vec3 ambientColor = vec3(0.1,0.1,0.1);
       vec3 diffuseColor = fColor.xyz;
       vec3 specularColor = vec3(1,1,1);
-      vec3 lightPosition = vec3(1,1,1); 
+      vec3 lightPosition = vec3(1,1,1);
       float d = max( dot( N , normalize(lightPosition) ) , 0 );
       float s = pow( d , 3 );
       color.xyz = diffuseColor.xyz * d + specularColor * s + ambientColor;
@@ -175,7 +176,7 @@ int main(int argc, char *argv[])
       mat4 T = quadrics_anisotropic_variance_matrix( vPos , 0.1 ) * rotz * rotx;
       /*
       // outline only
-      ConvexHull2D hull = quadrics_2D_convex_hull( mvp, T ); 
+      ConvexHull2D hull = quadrics_2D_convex_hull( mvp, T );
       cvh_draw_lines( hull );
       */
       /*
@@ -199,17 +200,17 @@ int main(int argc, char *argv[])
     }
     )EOF" }
     };
-  
+
   const auto pass1_shader_id = eglm.create_shader_program(
       "quadrics_raytrace"
     , pass1_shader_sources
     , { .m_blend_src = GL_ONE
       , .m_blend_dst = GL_ZERO
-      , .m_enable_flags  = { GL_DEPTH_TEST } 
+      , .m_enable_flags  = { GL_DEPTH_TEST }
       , .m_disable_flags = { GL_CULL_FACE , GL_BLEND } } );
   auto & shader1 = eglm.shader_program(pass1_shader_id);
   std::cout << "Shader1 Pipeline config :" << std::boolalpha << std::endl;
-  shader1.m_pipeline_config.to_stream( std::cout );    
+  shader1.m_pipeline_config.to_stream( std::cout );
 
 
   const auto pass2_shader_id = eglm.create_shader_program(
@@ -221,7 +222,7 @@ int main(int argc, char *argv[])
       , .m_disable_flags = { GL_CULL_FACE } } );
   auto & shader2 = eglm.shader_program(pass2_shader_id);
   std::cout << "Shader2 Pipeline config :" << std::boolalpha << std::endl;
-  shader2.m_pipeline_config.to_stream( std::cout );    
+  shader2.m_pipeline_config.to_stream( std::cout );
 
   auto camera_id = eglm.create_camera("pov");
   auto & camera = eglm.camera(camera_id);
@@ -238,7 +239,7 @@ int main(int argc, char *argv[])
   auto * el_buf_ptr = half_elements_buffer.map_buffer_write_only();
   for(int i=0;i<n_points;i+=2) { el_buf_ptr[i/2] = i; }
   half_elements_buffer.unmap_buffer();
-  
+
   const auto buf_id = eglm.create_vertex_buffers("vertex_attribs",n_points , { GL_FLOAT,4, GL_FLOAT,1 } );
 
   glColorMask (GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
@@ -288,7 +289,7 @@ int main(int argc, char *argv[])
     glDrawArrays(GL_POINTS, 0, n_points);
 
     pixbuf.use();
-    
+
     glReadPixels(0, 0, pixbuf.width(), pixbuf.height(), pixbuf.format(), pixbuf.data_type(), NULL );
     std::string filename = std::format("eglscreen{}x{}", width,height);
     std::ofstream raw_out(filename+".raw");
@@ -322,13 +323,13 @@ int main(int argc, char *argv[])
     }
     pixbuf.unmap_buffer();
     GLuint frametexture = pixbuf.copy_to_texture();
-    
+
     int fb_id = eglm.create_frame_buffer("background" /* , GL_READ_FRAMEBUFFER */ );
     auto & fb = eglm.frame_buffer(fb_id);
     fb.bind();
     fb.attach_texture( pixbuf.copy_to_texture() /* , GL_COLOR_ATTACHMENT0 */ );
     fb.unbind();
-    
+
     struct
     {
       GLfloat move[3] = { 0.0f , 0.0f , 0.0f };
@@ -389,7 +390,7 @@ int main(int argc, char *argv[])
       {
         uistate.tilt[0] += dx * 0.1f;
         uistate.tilt[1] += dy * 0.1f;
-        update_cam = 1;        
+        update_cam = 1;
       }
       if( uistate.mid_drag )
       {
@@ -408,6 +409,8 @@ int main(int argc, char *argv[])
 
     bool first = true;
     GLfloat phi_base = 0.0f;
+    long frame_counter = 0;
+    auto T0 = std::chrono::high_resolution_clock::now();
     while( ! uistate.should_exit )
     {
       ren_surf.process_events();
@@ -473,7 +476,7 @@ int main(int argc, char *argv[])
       fb.unbind();
 
       glvbos.use();
-      
+
       shader1.use();
       if( uistate.half_elements ) half_elements_buffer.draw(GL_POINTS);
       else glDrawArrays(GL_POINTS, 0, n_points);
@@ -486,6 +489,15 @@ int main(int argc, char *argv[])
       }
 
       ren_surf.swap_buffers();
+      ++ frame_counter;
+      auto T1 = std::chrono::high_resolution_clock::now();
+      double time_ms = ( T1 - T0 ).count() / 1000000.0;
+      if( time_ms >= 1000.0 )
+      {
+        T0 = T1;
+        std::cout << "FPS = " << frame_counter*1000.0/time_ms << std::endl;
+        frame_counter = 0;
+      }
     }
   }
 

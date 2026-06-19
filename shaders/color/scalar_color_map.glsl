@@ -1,6 +1,6 @@
 vec4 scalar_pv_colormap(float x, float lo, float hi)
 {
-  x = (x-lo)/(hi-lo);
+  x = clamp( (x-lo)/(hi-lo) , 0.0 , 1.0 );
   if( x < 0.5 )
   {
     x *= 2;
