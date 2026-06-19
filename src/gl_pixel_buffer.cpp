@@ -25,11 +25,11 @@ under the License.
 
 namespace EGLRender
 {
-  
+  // we handle 32-bits only data types
   GLenum GLPixelBuffer::data_type() const
   {
     if( m_format == GL_RGBA ) return GL_UNSIGNED_BYTE;
-    else if( m_format == GL_DEPTH_COMPONENT ) return GL_UNSIGNED_INT;
+    else if( m_format == GL_DEPTH_COMPONENT ) return GL_FLOAT;
     else if( m_format == GL_DEPTH_STENCIL ) return GL_UNSIGNED_INT_24_8;
     else return GL_NONE;
   }
@@ -39,7 +39,7 @@ namespace EGLRender
     GLuint sz = width * height;
     GLenum dtype = GL_NONE;
     if( format == GL_RGBA ) dtype = GL_UNSIGNED_BYTE;
-    else if( format == GL_DEPTH_COMPONENT ) dtype = GL_UNSIGNED_INT;
+    else if( format == GL_DEPTH_COMPONENT ) dtype = GL_FLOAT;
     else if( format == GL_DEPTH_STENCIL ) dtype = GL_UNSIGNED_INT_24_8;
     else
     {
@@ -71,23 +71,25 @@ namespace EGLRender
 
   void GLPixelBuffer::resize(GLuint w, GLuint h)
   {
+    static_assert( sizeof(GLuint)==4 && sizeof(GLfloat)==4 );
+    static constexpr size_t data_type_sz = 4;
     if( w != m_width || h != m_height )
     {
       m_width=w; m_height=h;
       GLuint sz = m_width * m_height;
       glBindBuffer( m_direction, m_pixel_buffer);
-      glNamedBufferStorage(m_pixel_buffer, sz * sizeof(GLuint), NULL, ( m_direction == GL_PIXEL_PACK_BUFFER ) ? GL_MAP_READ_BIT : GL_MAP_WRITE_BIT );
+      glNamedBufferStorage(m_pixel_buffer, sz * data_type_sz, NULL, ( m_direction == GL_PIXEL_PACK_BUFFER ) ? GL_MAP_READ_BIT : GL_MAP_WRITE_BIT );
     }
   }
 
-  GLuint * GLPixelBuffer::map_buffer_write_only()
+  void * GLPixelBuffer::map_buffer_write_only()
   {
-    return reinterpret_cast<GLuint*>( glMapNamedBuffer(m_pixel_buffer, GL_WRITE_ONLY) );
+    return glMapNamedBuffer(m_pixel_buffer, GL_WRITE_ONLY);
   }
 
-  const GLuint * GLPixelBuffer::map_buffer_read_only()
+  const void * GLPixelBuffer::map_buffer_read_only()
   {
-    return reinterpret_cast<const GLuint*>( glMapNamedBuffer(m_pixel_buffer, GL_READ_ONLY) );
+    return glMapNamedBuffer(m_pixel_buffer, GL_READ_ONLY) ;
   }
 
   void GLPixelBuffer::unmap_buffer()
@@ -120,6 +122,15 @@ namespace EGLRender
       glTexSubImage2D(GL_TEXTURE_2D,0,0,0,m_width,m_height,m_format,data_type(),NULL);
     }
     return m_texture;
+  }
+
+  void GLPixelBuffer::read_pixels()
+  {
+    use();
+#ifndef NDEBUG
+    std::cout << "read pixels : size="<<m_width<<"x"<<m_height<<", format="<<gl_enum_to_string(m_format)<<", type="<<gl_enum_to_string(data_type())<<std::endl;
+#endif
+    glReadPixels(0, 0, m_width, m_height, m_format, data_type(), NULL );
   }
 
   GLPixelBuffer::~GLPixelBuffer()

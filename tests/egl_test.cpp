@@ -287,16 +287,12 @@ int main(int argc, char *argv[])
     shader2.use();
     glDrawArrays(GL_POINTS, 0, n_points);
 
-//    size_t pixel_data_sz = width * height * 4;
-//    auto pixel_data = std::make_unique_for_overwrite<char[]>(pixel_data_sz);
-
     pixbuf.use();
-    size_t pixel_data_sz = pixbuf.data_size();
     
-    glReadPixels(0, 0, pixbuf.width(), pixbuf.height(), pixbuf.format(), pixbuf.data_type(), NULL /*pixel_data.get()*/ );
+    glReadPixels(0, 0, pixbuf.width(), pixbuf.height(), pixbuf.format(), pixbuf.data_type(), NULL );
     std::string filename = std::format("eglscreen{}x{}", width,height);
     std::ofstream raw_out(filename+".raw");
-    raw_out.write( (const char*) /*pixel_data.get()*/ pixbuf.map_buffer_read_only() , pixel_data_sz );
+    raw_out.write( (const char*) pixbuf.map_buffer_read_only() , pixbuf.data_size() );
     pixbuf.unmap_buffer();
     raw_out.close();
     std::ofstream meta_out(filename+".to-png");
@@ -311,7 +307,7 @@ int main(int argc, char *argv[])
     int pixbuf_id = eglm.create_pixel_buffer("pixelwrite",width,height,GL_RGBA,GL_PIXEL_UNPACK_BUFFER);
     auto & pixbuf = eglm.pixel_buffer(pixbuf_id);
     pixbuf.use();
-    auto * pixel_data = pixbuf.map_buffer_write_only();
+    uint32_t * pixel_data = (uint32_t*) pixbuf.map_buffer_write_only();
     for(GLuint h=0;h<height;h++)
     {
       uint32_t r = h*128/height;
@@ -457,7 +453,7 @@ int main(int argc, char *argv[])
       glClear( /*GL_COLOR_BUFFER_BIT| */ GL_DEPTH_BUFFER_BIT|GL_STENCIL_BUFFER_BIT);
 
       // draw a background piture
-      pixel_data = pixbuf.map_buffer_write_only();
+      pixel_data = (uint32_t*) pixbuf.map_buffer_write_only();
       for(GLuint h=0;h<height;h++)
       {
         uint32_t r = std::clamp( sin(phi_base*30+(h*M_PI*5/height))*127+127.5 , 1.0 , 255.0 );

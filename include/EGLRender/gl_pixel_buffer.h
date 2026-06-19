@@ -43,12 +43,13 @@ namespace EGLRender
     inline GLuint data_size() const { return m_width*m_height*4; }
     void resize(GLuint w, GLuint h);
 
-    const GLuint* map_buffer_read_only();
-    GLuint* map_buffer_write_only();
+    const void* map_buffer_read_only();
+    void* map_buffer_write_only();
     void unmap_buffer();
 
     void use();
     void unuse();
+    void read_pixels();
     GLuint copy_to_texture();
 
     ~GLPixelBuffer();
