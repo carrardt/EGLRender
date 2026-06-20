@@ -31,7 +31,7 @@ namespace EGLRender
   void GLPipelineConfig::use() const
   {
     for(auto e:m_enable_flags) glEnable( e );
-    for(auto e:m_disable_flags) glDisable( e );    
+    for(auto e:m_disable_flags) glDisable( e );
     glAlphaFunc( m_alpha_func , m_alpha_func_ref );
     glBlendFunc( m_blend_src , m_blend_dst );
     glStencilMask( m_stencil_mask );
@@ -75,7 +75,7 @@ namespace EGLRender
           GLint info_log_len = 0;
           glGetShaderiv(shaderId,GL_INFO_LOG_LENGTH,&info_log_len);
           auto log_data = std::make_unique_for_overwrite<char[]>(info_log_len+2);
-          glGetShaderInfoLog(shaderId,info_log_len,&info_log_len,log_data.get());      
+          glGetShaderInfoLog(shaderId,info_log_len,&info_log_len,log_data.get());
           log_data[info_log_len] = '\0';
           if( info_log_len > 0 )
           {
@@ -137,23 +137,23 @@ namespace EGLRender
   std::vector<GLUniformBlock> GLShaderProgram::init_uniform_blocks(GLuint prog)
   {
     std::vector<GLUniformBlock> blocks;
-    
+
     // gather information about shader program
-    GLint uniform_block_count = 0; 
+    GLint uniform_block_count = 0;
     glGetProgramiv(prog, GL_ACTIVE_UNIFORM_BLOCKS, &uniform_block_count);
     for(int i=0; i<uniform_block_count; i++)
     {
       GLint b=0;
       glGetActiveUniformBlockiv(prog, i, GL_UNIFORM_BLOCK_BINDING, &b);
       if( b >= blocks.size() ) blocks.resize( b+1 );
-      
+
       blocks[b].m_binding = b;
       glGetActiveUniformBlockName(prog, i, blocks[b].MAX_NAME_LEN , nullptr, blocks[b].m_name );
-      
+
       GLint variable_count= 0;
       glGetActiveUniformBlockiv(prog, i, GL_UNIFORM_BLOCK_ACTIVE_UNIFORMS, &variable_count);
       blocks[b].m_variables.assign( variable_count, GLUniformVariable{} );
-      
+
       std::vector<GLint> variables( variable_count , 0 );
       glGetActiveUniformBlockiv(prog, i, GL_UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES, variables.data() );
       for(int k= 0; k < variable_count; k++)
@@ -169,6 +169,24 @@ namespace EGLRender
     }
 
 #   ifndef NDEBUG
+    GLint atomic_buffers = 0;
+    glGetProgramiv(prog, GL_ACTIVE_ATOMIC_COUNTER_BUFFERS, &atomic_buffers);
+    std::cout << atomic_buffers << " atomic buffers" << std::endl;
+
+    GLint active_uniforms = 0;
+    glGetProgramiv(prog, GL_ACTIVE_UNIFORMS, &active_uniforms);
+    std::cout << active_uniforms<<" active uniforms :" << std::endl;
+    for(int i=0;i<active_uniforms;i++)
+    {
+      GLsizei len = 0;
+      GLint data_sz = 0;
+      GLenum data_type = GL_NONE;
+      char name[64] = {'\0',};
+      glGetActiveUniform(prog,i,63,&len,&data_sz,&data_type,name);
+      name[len]='\0';
+      std::cout<<"  uniform "<<i<<" : name='"<<name<<"', size="<<data_sz<<", type="<<gl_enum_to_string(data_type)<<std::endl;
+    }
+
     std::cout << blocks.size() << " uniform blocks :" << std::endl;
     for(const auto & b : blocks)
     {
@@ -179,7 +197,7 @@ namespace EGLRender
       }
     }
 #endif
-    
+
     return blocks;
   }
 
@@ -201,13 +219,13 @@ namespace EGLRender
   {
     return m_uniforms[i];
   }
-  
+
   int GLShaderProgram::uniform_id(std::string_view name)
   {
     for(size_t i=0;i<m_uniforms.size();i++) if(name==m_uniforms[i].m_name) return i;
     return -1;
   }
-  
+
   GLUniformBlock& GLShaderProgram::uniform(std::string_view name)
   {
     return uniform(uniform_id(name));
@@ -218,13 +236,13 @@ namespace EGLRender
     map_buffer();
     return { m_variables[i] , m_buffer_mapping };
   }
-  
+
   int GLUniformBlock::variable_id(std::string_view name)
   {
     for(size_t i=0;i<m_variables.size();i++) if(name==m_variables[i].m_name) return i;
     return -1;
   }
-  
+
   const GLUniformVariableAccessor GLUniformBlock::variable(std::string_view name)
   {
     return variable( variable_id(name) );
@@ -283,7 +301,7 @@ namespace EGLRender
       assert( m_buffer_mapping != nullptr );
     }
   }
-  
+
   void GLUniformBlock::unmap_buffer()
   {
     if( m_buffer_mapping != nullptr )
@@ -326,10 +344,10 @@ namespace EGLRender
       std::abort();
     }
   }
-  
+
   template void GLUniformVariableAccessor::set<GLint>(GLint value) const;
   template void GLUniformVariableAccessor::set<GLfloat>(GLfloat value) const;
-  
+
   template<class T>
   void GLUniformVariableAccessor::set(const T* value, GLuint n) const requires std::is_arithmetic_v<T>
   {
@@ -382,13 +400,13 @@ namespace EGLRender
         case GL_BOOL_VEC4:
           vecsize = 4;
           break;
-        case GL_FLOAT_MAT2: 
+        case GL_FLOAT_MAT2:
           vecsize = 4;
           break;
-        case GL_FLOAT_MAT3: 
+        case GL_FLOAT_MAT3:
           vecsize = 9;
           break;
-        case GL_FLOAT_MAT4: 
+        case GL_FLOAT_MAT4:
           vecsize = 16;
           break;
       }
