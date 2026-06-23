@@ -19,7 +19,16 @@ under the License.
 
 #pragma once
 
+#ifdef EGLRENDER_USE_X11
 #include <EGL/egl.h>
+#endif
+
+#ifdef EGLRENDER_USE_WAYLAND
+#include <wayland-client.hpp>
+#include <wayland-client-protocol-extra.hpp>
+#include <wayland-egl.hpp>
+#endif
+
 #define EGL_EGLEXT_PROTOTYPES
 #define GL_GLEXT_PROTOTYPES
 #include <EGL/eglext.h>
