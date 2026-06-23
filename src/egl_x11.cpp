@@ -30,7 +30,7 @@ under the License.
 namespace EGLRender
 {
 
-  EGLNativeDisplayType platform_get_native_display()
+  EGLRenderer::NativeDisplayType platform_get_native_display()
   {
     /* open standard display (primary screen) */
     Display * xdisplay = XOpenDisplay ( NULL );
@@ -41,7 +41,7 @@ namespace EGLRender
     return xdisplay;
   }
 
-  EGLNativeWindowType platform_get_native_window(EGLNativeDisplayType native_display, int w, int h, bool fullscreen, std::string_view name )
+  EGLRenderer::NativeWindowType platform_get_native_window(EGLRenderer::NativeDisplayType native_display, int w, int h, bool fullscreen, std::string_view name )
   {
     Display* xdisplay = (Display*) native_display;
     Window root = DefaultRootWindow( xdisplay );
@@ -69,7 +69,7 @@ namespace EGLRender
     return win;
   }
 
-  void platform_native_window_process_events(EGLNativeDisplayType dpy, EGLNativeWindowType win, const NativeWindowEventHandler& cb)
+  void platform_native_window_process_events(EGLRenderer::NativeDisplayType dpy, EGLRenderer::NativeWindowType win, const NativeWindowEventHandler& cb)
   {
     static const long global_event_mask =
       StructureNotifyMask |

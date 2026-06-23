@@ -31,6 +31,9 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # ==========================
 project(EGLRender VERSION 1.0.0 LANGUAGES CXX)
 
+# embedded cmake modules
+set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+
 # make cache variables for install destinations
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
@@ -39,16 +42,19 @@ find_package(OpenGL)
 set(EGLRENDER_LIBS OpenGL::EGL OpenGL::OpenGL)
 
 set(EGLRENDER_NATIVE_DISPLAY "X11" CACHE STRING "Native display for EGL on screen rendering")
-set_property(CACHE EGLRENDER_NATIVE_DISPLAY PROPERTY STRINGS X11 GLES WIN)
+set_property(CACHE EGLRENDER_NATIVE_DISPLAY PROPERTY STRINGS X11 WAYLAND WIN)
 if(EGLRENDER_NATIVE_DISPLAY STREQUAL "X11")
   find_package(X11)
   list(APPEND EGLRENDER_LIBS X11::X11)
   set(EGLRENDER_DEFINITIONS EGLRENDER_USE_X11=1)
   set(EGLRENDER_PLATFORM_SRC egl_x11.cpp)
-elseif(EGLRENDER_NATIVE_DISPLAY STREQUAL "GLES")
-  message(FATAL_ERROR "GLES native display not supported")
+elseif(EGLRENDER_NATIVE_DISPLAY STREQUAL "WAYLAND")
+  find_package(wayland REQUIRED)
+  list(APPEND EGLRENDER_LIBS ${WAYLAND_LIBRARIES})
+  set(EGLRENDER_DEFINITIONS EGLRENDER_USE_WAYLAND=1)
+  set(EGLRENDER_PLATFORM_SRC egl_wayland.cpp)
 elseif(EGLRENDER_NATIVE_DISPLAY STREQUAL "WIN")
-  message(FATAL_ERROR "WIN native display not supported")
+  message(FATAL_ERROR "Unsupported WIN backend")
 else()
   message(FATAL_ERROR "Unknown native display ${EGLRENDER_NATIVE_DISPLAY}")
 endif()

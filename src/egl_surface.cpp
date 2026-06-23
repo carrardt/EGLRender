@@ -43,7 +43,7 @@ namespace EGLRender
     return "unknown";
   }
 
-  EGLNativeWindowType EGLRenderSurface::init_native_window(const EGLRenderer * egl, EGLRenderSurfaceClass surf_type, EGLint w, EGLint h, std::string_view name)
+  EGLRenderer::NativeWindowType EGLRenderSurface::init_native_window(const EGLRenderer * egl, EGLRenderSurfaceClass surf_type, EGLint w, EGLint h, std::string_view name)
   {
     if( egl == nullptr || surf_type == EGLRenderSurfaceClass::PBUFFER ) return {};
     else return platform_get_native_window( egl->m_native_dpy, w, h, surf_type == EGLRenderSurfaceClass::FULLSCREEN, name );
@@ -86,7 +86,7 @@ namespace EGLRender
     return ctx;
   }
 
-  EGLSurface EGLRenderSurface::init_surface(const EGLRenderer * egl, EGLConfig cfg, EGLint& w, EGLint& h, EGLRenderSurfaceClass surf_type, EGLNativeWindowType win)
+  EGLSurface EGLRenderSurface::init_surface(const EGLRenderer * egl, EGLConfig cfg, EGLint& w, EGLint& h, EGLRenderSurfaceClass surf_type, EGLRenderer::NativeWindowType win)
   {
     EGLSurface surf;
 //    std::cout << "Window = "<<win<<std::endl;

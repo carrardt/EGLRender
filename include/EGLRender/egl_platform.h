@@ -19,12 +19,7 @@ under the License.
 
 #pragma once
 
-#include <EGL/egl.h>
-#define EGL_EGLEXT_PROTOTYPES
-#define GL_GLEXT_PROTOTYPES
-#include <EGL/eglext.h>
-#include <GL/gl.h>
-
+#include <EGLRender/egl_renderer.h>
 #include <EGLRender/native_window_event_handler.h>
 
 #include <string_view>
@@ -37,9 +32,9 @@ namespace EGLRender
   using vec4 = std::array<GLfloat,4>;
   using mat4 = std::array<GLfloat,16>;
 
-  EGLNativeDisplayType platform_get_native_display();
-  EGLNativeWindowType platform_get_native_window(EGLNativeDisplayType native_display, int w, int h, bool fullscreen, std::string_view name = "EGL");
-  void platform_native_window_process_events(EGLNativeDisplayType dpy, EGLNativeWindowType win, const NativeWindowEventHandler& cb);
+  EGLRenderer::NativeDisplayType platform_get_native_display();
+  EGLRenderer::NativeWindowType platform_get_native_window(EGLRenderer::NativeDisplayType native_display, int w, int h, bool fullscreen, std::string_view name = "EGL");
+  void platform_native_window_process_events(EGLRenderer::NativeDisplayType dpy, EGLRenderer::NativeWindowType win, const NativeWindowEventHandler& cb);
 
   const char * gl_string_non_null(const GLubyte* s);
   GLuint gl_type_bytes(GLenum t);

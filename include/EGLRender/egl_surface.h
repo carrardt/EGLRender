@@ -63,16 +63,16 @@ namespace EGLRender
     NativeWindowEventHandler m_event_handler = {};
 #endif
 
-    EGLNativeWindowType m_native_win = init_native_window(m_egl,m_surface_type,m_width,m_height, m_window_title ) ;
+    EGLRenderer::NativeWindowType m_native_win = init_native_window(m_egl,m_surface_type,m_width,m_height, m_window_title ) ;
 
     EGLConfig m_eglCfg = init_config(m_egl,m_surface_type,m_color_bits,m_alpha_bits,m_stencil_bits,m_depth_bits);
     EGLContext m_eglCtx = init_surface_ctx(m_egl,m_eglCfg);
     EGLSurface m_eglSurf = init_surface(m_egl,m_eglCfg,m_width,m_height,m_surface_type,m_native_win);
 
-    static EGLNativeWindowType init_native_window(const EGLRenderer * egl, EGLRenderSurfaceClass surf_type, EGLint w, EGLint h, std::string_view name = "EGL" );
+    static EGLRenderer::NativeWindowType init_native_window(const EGLRenderer * egl, EGLRenderSurfaceClass surf_type, EGLint w, EGLint h, std::string_view name = "EGL" );
     static EGLConfig init_config(const EGLRenderer * egl, EGLRenderSurfaceClass surf_type, EGLint colbits, EGLint alphabits, EGLint stencilbits, EGLint zbits);
     static EGLContext init_surface_ctx(const EGLRenderer * egl, EGLConfig cfg);
-    static EGLSurface init_surface(const EGLRenderer * egl, EGLConfig cfg, EGLint& w, EGLint& h, EGLRenderSurfaceClass surf_type, EGLNativeWindowType win);
+    static EGLSurface init_surface(const EGLRenderer * egl, EGLConfig cfg, EGLint& w, EGLint& h, EGLRenderSurfaceClass surf_type, EGLRenderer::NativeWindowType win);
 
     void process_events();
     void make_current();
@@ -80,7 +80,7 @@ namespace EGLRender
 
     inline GLint width() const { return m_width; }
     inline GLint height() const { return m_height; }
-    inline EGLNativeWindowType native_window() const { return m_native_win; }
+    inline EGLRenderer::NativeWindowType native_window() const { return m_native_win; }
 
     ~EGLRenderSurface();
   };
