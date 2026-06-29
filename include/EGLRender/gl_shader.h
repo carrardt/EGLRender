@@ -133,7 +133,7 @@ namespace EGLRender
     
     std::vector<GLShaderTypeSource> m_shader_sources = {
       { GL_VERTEX_SHADER, R"EOF(
-      #version 330 core
+      #version 460 core
       layout (location = 0) in vec3 aPos;
       void main()
       {
@@ -141,7 +141,7 @@ namespace EGLRender
       }
       )EOF" } ,
       { GL_FRAGMENT_SHADER, R"EOF(
-      #version 330 core
+      #version 460 core
       out vec4 FragColor;
       void main()
       {
@@ -150,13 +150,14 @@ namespace EGLRender
       )EOF" } };
 
     GLPipelineConfig m_pipeline_config = {};
-      
-    std::vector<GLuint> m_shaders = compile_shaders( m_shader_sources );
+    
+    std::map<std::string,int> m_auto_binding_points = {};
+    std::vector<GLuint> m_shaders = compile_shaders( m_shader_sources , m_auto_binding_points );
     GLuint m_shader_program  = link_program( m_shaders );
     std::vector<GLUniformBlock> m_uniforms = init_uniform_blocks(m_shader_program);
     
-    static std::string parse_shader_includes(const std::string& shader_source);
-    static std::vector<GLuint> compile_shaders(std::span<GLShaderTypeSource> shader_sources);
+    static std::string parse_shader_code(const std::string& shader_source, std::map<std::string,int>& auto_binding_map);
+    static std::vector<GLuint> compile_shaders(std::span<GLShaderTypeSource> shader_sources, std::map<std::string,int>& auto_binding_map);
     static GLuint link_program(std::span<GLuint> shaders);
     static std::vector<GLUniformBlock> init_uniform_blocks(GLuint prog);
 

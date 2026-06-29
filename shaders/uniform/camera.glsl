@@ -1,6 +1,6 @@
 // standardized transformation matrices for all shaders
 // Camera tools in EGLRender will refer to this uniform block
-uniform CameraUniformObject
+layout(binding= auto) uniform CameraUniformObject
 {
   mat4 modelview[2]; // modelview and modelviewInverse
   mat4 projection[2]; // projection and projectionInverse

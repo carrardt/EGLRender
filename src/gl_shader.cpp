@@ -39,29 +39,88 @@ namespace EGLRender
     glStencilOp( m_stencil_op_sfail, m_stencil_op_dpfail, m_stencil_op_dppass );
   }
 
-  std::string GLShaderProgram::parse_shader_includes(const std::string& shader_source)
+  std::string GLShaderProgram::parse_shader_code(const std::string& shader_source, std::map<std::string,int>& auto_binding_map)
   {
+    static const char * include_extension_mstr =
+      "[ \t]*#[ \t]*extension[ \t]+GL_ARB_shading_language_include[^\n]*\n" ;
+    static const char * commented_include_extension_rstr =
+      "// removed #extension GL_ARB_shading_language_include\n" ;
+    static const char * include_mstr =
+      "#include[[:space:]]+[<\"](.+)[>\"][[:space:]]*\n";
+    static const char * auto_uniform_binding_mstr =
+      "layout[[:space:]]*\\([^\\)]*binding[[:space:]]*=[[:space:]]*(auto)[^\\)]*\\)" ;
+
+//      "layout[[:space:]]*\\([^\\)]*binding[[:space:]]*=[[:space:]]*(auto)[^\\)]*\\)[[:space:]]*uniform[[:space:]]+([a-zA-Z_][0-9a-zA-Z_]*)([[:space:]]*\\{)|([a-zA-Z_][0-9a-zA-Z_]*[[:space:]]*;)" ;
+
+
+    // find and suppress langue include extension directive
     std::string input = shader_source;
-    auto r = std::regex("[ \t]*#[ \t]*extension[ \t]+GL_ARB_shading_language_include[^\n]*\n");
-    input = std::regex_replace(input,r,"// removed #extension GL_ARB_shading_language_include\n");
-    r = std::regex("#include[ \t]+[<\"].+[>\"][ \t]*\n");
-    for (std::smatch sm; regex_search(input, sm, r);)
+    auto re = std::regex(include_extension_mstr);
+    input = std::regex_replace(input,re,commented_include_extension_rstr);
+    
+    // find include directives and replace them with include content
+    re = std::regex(include_mstr);
+    for( std::smatch sm ; std::regex_search(input, sm, re) ; )
     {
-      auto inc = sm.str();
-      auto s = inc.find_first_of("<\"");
-      auto e = inc.find_first_of(">\"",s+1);
-      auto incname = inc.substr( s+1 , e-s-1 );
-      input = input.replace( sm.position() , sm.length() , platform_get_named_string(incname) ); //sm.suffix();
+      // sm[0] is the whole match
+      // sm[1] is the submatch corresponding to include file name in between <> or ""
+      const auto incname = sm[1].str();
+      std::cout << "replacing include '"<<incname<<"' with registered content"<<std::endl;
+      input = input.replace( sm.position() , sm.length() , platform_get_named_string(incname) );
     }
+    
+    // find uniform single declaration or uniform blocks with auto binding
+    re = std::regex(auto_uniform_binding_mstr);
+    for( std::smatch sm ; std::regex_search(input, sm, re); )
+    {
+      // sm[0] is the whole match
+      // sm[1] is the auto keyword
+      // sm[2] is the first identifier : either uniform variable type or uniform block name
+      // sm[5] is uniform variable name in case of a single uniform, and is empty in case of uniform block
+      std::string name;
+      if( sm[5].matched )
+      {
+        name = sm[5].str();
+        std::cout << "auto binding for uniform var '"<<name<<"'"<<std::endl;
+      }
+      else if( sm[2].matched )
+      {
+        name = sm[2].str();
+        std::cout << "auto binding for uniform block '"<<name<<"'"<<std::endl;
+      }
+      else
+      {
+        std::cout<<"regex error"<<std::endl;
+        for (std::size_t i = 0; i<sm.size(); ++i)
+        {
+          size_t pos = sm[i].first - input.begin();
+          size_t len = sm[i].length();
+          std::cout << "sm[" << i << "]=[" << sm[i] << "] pos="<<pos<<" len="<<len<<"\n";
+        }
+      }
+      int bp = -1;
+      auto it = auto_binding_map.find(name);
+      if( it == auto_binding_map.end() )
+      {
+        bp = auto_binding_map.size();
+        auto_binding_map[name] = bp;
+      }
+      else bp = it->second;
+      std::cout << "auto binding point = "<<bp<<std::endl;
+      size_t pos = sm[1].first - input.begin();
+      size_t len = sm[1].length();
+      input = input.replace( pos , len , std::to_string(bp) );
+    }
+
     return input;
   }
 
-  std::vector<GLuint> GLShaderProgram::compile_shaders(std::span<GLShaderTypeSource> shader_sources)
+  std::vector<GLuint> GLShaderProgram::compile_shaders(std::span<GLShaderTypeSource> shader_sources, std::map<std::string,int>& auto_binding_map)
   {
     std::vector<GLuint> shader_ids;
     for(const auto& shader : shader_sources)
     {
-      auto parsed_shader_source = parse_shader_includes(shader.m_source);
+      auto parsed_shader_source = parse_shader_code(shader.m_source,auto_binding_map);
       if( ! parsed_shader_source.empty() )
       {
         const char * src [] = { parsed_shader_source.data() };
@@ -141,21 +200,19 @@ namespace EGLRender
     // gather information about shader program
     GLint uniform_block_count = 0;
     glGetProgramiv(prog, GL_ACTIVE_UNIFORM_BLOCKS, &uniform_block_count);
-    for(int i=0; i<uniform_block_count; i++)
+    blocks.clear();
+    blocks.resize(uniform_block_count);
+    for(int b=0; b<uniform_block_count; b++)
     {
-      GLint b=0;
-      glGetActiveUniformBlockiv(prog, i, GL_UNIFORM_BLOCK_BINDING, &b);
-      if( b >= blocks.size() ) blocks.resize( b+1 );
-
-      blocks[b].m_binding = b;
-      glGetActiveUniformBlockName(prog, i, blocks[b].MAX_NAME_LEN , nullptr, blocks[b].m_name );
+      glGetActiveUniformBlockiv(prog, b, GL_UNIFORM_BLOCK_BINDING, & blocks[b].m_binding);
+      glGetActiveUniformBlockName(prog, b, blocks[b].MAX_NAME_LEN , nullptr, blocks[b].m_name );
 
       GLint variable_count= 0;
-      glGetActiveUniformBlockiv(prog, i, GL_UNIFORM_BLOCK_ACTIVE_UNIFORMS, &variable_count);
+      glGetActiveUniformBlockiv(prog, b, GL_UNIFORM_BLOCK_ACTIVE_UNIFORMS, &variable_count);
       blocks[b].m_variables.assign( variable_count, GLUniformVariable{} );
 
       std::vector<GLint> variables( variable_count , 0 );
-      glGetActiveUniformBlockiv(prog, i, GL_UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES, variables.data() );
+      glGetActiveUniformBlockiv(prog, b, GL_UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES, variables.data() );
       for(int k= 0; k < variable_count; k++)
       {
         glGetActiveUniformName(prog, variables[k], blocks[b].m_variables[k].MAX_NAME_LEN , nullptr, blocks[b].m_variables[k].m_name );
@@ -171,6 +228,7 @@ namespace EGLRender
 #   ifndef NDEBUG
     GLint atomic_buffers = 0;
     glGetProgramiv(prog, GL_ACTIVE_ATOMIC_COUNTER_BUFFERS, &atomic_buffers);
+    std::cout << "shader program #"<<prog<<" details :"<<std::endl;
     std::cout << atomic_buffers << " atomic buffers" << std::endl;
 
     GLint active_uniforms = 0;
