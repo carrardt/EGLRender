@@ -48,10 +48,7 @@ namespace EGLRender
     static const char * include_mstr =
       "#include[[:space:]]+[<\"](.+)[>\"][[:space:]]*\n";
     static const char * auto_uniform_binding_mstr =
-      "layout[[:space:]]*\\([^\\)]*binding[[:space:]]*=[[:space:]]*(auto)[^\\)]*\\)" ;
-
-//      "layout[[:space:]]*\\([^\\)]*binding[[:space:]]*=[[:space:]]*(auto)[^\\)]*\\)[[:space:]]*uniform[[:space:]]+([a-zA-Z_][0-9a-zA-Z_]*)([[:space:]]*\\{)|([a-zA-Z_][0-9a-zA-Z_]*[[:space:]]*;)" ;
-
+      "layout[[:space:]]*\\([^\\)]*binding[[:space:]]*=[[:space:]]*(auto)[^\\)]*\\)[[:space:]]*uniform[[:space:]]+([a-zA-Z_][0-9a-zA-Z_]*)[[:space:]]*\\{" ;
 
     // find and suppress langue include extension directive
     std::string input = shader_source;
@@ -65,7 +62,7 @@ namespace EGLRender
       // sm[0] is the whole match
       // sm[1] is the submatch corresponding to include file name in between <> or ""
       const auto incname = sm[1].str();
-      std::cout << "replacing include '"<<incname<<"' with registered content"<<std::endl;
+      // std::cout << "replacing include '"<<incname<<"' with registered content"<<std::endl;
       input = input.replace( sm.position() , sm.length() , platform_get_named_string(incname) );
     }
     
@@ -76,28 +73,8 @@ namespace EGLRender
       // sm[0] is the whole match
       // sm[1] is the auto keyword
       // sm[2] is the first identifier : either uniform variable type or uniform block name
-      // sm[5] is uniform variable name in case of a single uniform, and is empty in case of uniform block
-      std::string name;
-      if( sm[5].matched )
-      {
-        name = sm[5].str();
-        std::cout << "auto binding for uniform var '"<<name<<"'"<<std::endl;
-      }
-      else if( sm[2].matched )
-      {
-        name = sm[2].str();
-        std::cout << "auto binding for uniform block '"<<name<<"'"<<std::endl;
-      }
-      else
-      {
-        std::cout<<"regex error"<<std::endl;
-        for (std::size_t i = 0; i<sm.size(); ++i)
-        {
-          size_t pos = sm[i].first - input.begin();
-          size_t len = sm[i].length();
-          std::cout << "sm[" << i << "]=[" << sm[i] << "] pos="<<pos<<" len="<<len<<"\n";
-        }
-      }
+      assert( sm.size() == 3 );
+      std::string name = sm[2].str();
       int bp = -1;
       auto it = auto_binding_map.find(name);
       if( it == auto_binding_map.end() )
@@ -106,7 +83,7 @@ namespace EGLRender
         auto_binding_map[name] = bp;
       }
       else bp = it->second;
-      std::cout << "auto binding point = "<<bp<<std::endl;
+      // std::cout << "auto binding for uniform block '"<<name<<"' = "<<bp<<std::endl;
       size_t pos = sm[1].first - input.begin();
       size_t len = sm[1].length();
       input = input.replace( pos , len , std::to_string(bp) );

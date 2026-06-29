@@ -7,4 +7,3 @@ layout(binding= auto) uniform CameraUniformObject
   float aspect_ratio;
   vec2 viewport[2]; // fist couple is viewport w and h, second is 1/w, 1/h
 } camera;
-
